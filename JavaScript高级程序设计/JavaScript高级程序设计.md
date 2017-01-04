@@ -412,7 +412,7 @@ PS：
 - 这4个操作符对任何值都适用，遵循下列规则
   -  在应用于一个包含有效数字字符的字符串时，先将其转换为数字值，再执行加减1的操作。字符串变量变成数值变量。
   -  在应用于一个不包含有效数字字符的字符串时，将变量的值设置为NaN
-            字符串变量变成数值变量。
+             字符串变量变成数值变量。
   -  在应用于布尔值false时，先将其转换为0再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于布尔值true时，先将其转换为1再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于浮点数值时，执行加减1的操作。
@@ -1719,7 +1719,7 @@ function isHostMethod(object, property) {
   - Node.ENTITY_REFERENCE_NODE(5)；
   - Node.ENTITY_NODE(6)；
   - Node.PROCESSING_INSTRUCTION_NODE(7)；
-  -  Node.COMMENT_NODE(8)；
+  - Node.COMMENT_NODE(8)；
   - Node.DOCUMENT_NODE(9)；
   - Node.DOCUMENT_TYPE_NODE(10)；
   - Node.DOCUMENT_FRAGMENT_NODE(11)；
@@ -1751,6 +1751,423 @@ function isHostMethod(object, property) {
 
 
 
+
+# 第15章 使用 Canvas 绘图
+
+## 15.1 基本用法
+
+- 要使用<canvas>元素，必须先设置其width和height属性，指定可以绘图的区域大小。出现在开始和结束标签中的内容是后备信息，如果浏览器不支持<canvas>元素，就会显示这些信息。
+
+- 在使用<canvas>元素之前，首先要检测getContext()方法是否存在，这一步非常重要。有些浏览器会为HTML规范之外的元素创建默认的HTML元素对象。在这种情况下，即使变量中保存着一个有效的元素引用，也检测不到getContext()方法。
+
+- 使用toDataURL()方法，可以导出在<canvas>元素上绘制的图像。这个方法接受一个参数，即图像的MIME类型格式，而且适合用于创建图像的任何上下文。
+
+  > 默认情况下，浏览器会将图像编码为PNG格式（除非另行指定）。Firefox和Opera也支持基于"image/jpeg"参数的JPEG编码格式。由于这个方法是后来才追加的，所以支持<canvas>的浏览器也是在较新的版本中才加入了对它的支持，比如IE9、Firefox 3.5和Opera 10。
+
+  > 如果绘制到画布上的图像源自不同的域，toDataURL()方法会抛出错误。
+
+## 15.2 2D上下文
+
+- 默认情况下，width和height表示水平和垂直两个方向上可用的像素数目。
+
+### 15.2.1 填充和描边
+
+- 2D上下文的两种基本绘图操作是填充和描边。
+- 操作的结果取决于两个属性：fillStyle和strokeStyle。
+  - 这两个属性的值可以是字符串、渐变对象或模式对象，而且它们的默认值都是"#000000"。如果为它们指定表示颜色的字符串值，可以使用CSS中指定颜色值的任何格式，包括颜色名、十六进制码、rgb、rgba、hsl或hsla。
+
+### 15.2.2 绘制矩形
+
+- 方法包括fillRect()、strokeRect()和clearRect()。
+
+  - 这三个方法都能接收4个参数：矩形的x坐标、矩形的y坐标、矩形宽度和矩形高度。这些参数的单位都是像素。
+
+  > 描边线条的宽度由lineWidth属性控制，该属性的值可以是任意整数。另外，通过lineCap 属性可以控制线条末端的形状是平头、圆头还是方头（"butt"、"round"或"square"），通过lineJoin属性可以控制线条相交的方式是圆交、斜交还是斜接（"round"、"bevel"或"miter"）。
+
+### 15.2.3 绘制路径
+
+- 要绘制路径，首先必须调用beginPath()方法，表示要开始绘制新路径。
+- 再通过调用下列方法来实际地绘制路径：
+  - arc(x,y,radius,startAngle,endAngle, counterclockwise)
+    - 最后一个参数表示startAngle和endAngle是否按逆时针方向计算，值为false表示按顺时针方向计算。
+  - arcTo(x1, y1, x2, y2, radius)
+  - bezierCurveTo(c1x, c1y, c2x, c2y, x, y)
+  - lineTo(x, y)
+  - moveTo(x, y)
+  - quadraticCurveTo(cx, cy, x, y)
+  - rect(x, y, width, height)
+- 如果想绘制一条连接到路径起点的线条，可以调用closePath()。如果路径已经完成，你想用fillStyle填充它，可以调用fill()方法。另外，还可以调用stroke()方法对路径描边，描边使用的是strokeStyle。最后还可以调用clip()，这个方法可以在路径上创建一个剪切区域。
+- isPointInPath()的方法，接收x和y坐标作为参数，用于在路径被关闭之前确定画布上的某一点是否位于路径上
+
+### 15.2.4  绘制文本
+
+- 绘制文本主要有两个方法：fillText()和strokeText()。
+  - 两个方法都可以接收4个参数：要绘制的文本字符串、x坐标、y坐标和可选的最大像素宽度。
+  - 都以下列3个属性为基础：
+    - font：表示文本样式、大小及字体，用CSS中指定字体的格式来指定
+    - textAlign：表示文本对齐方式。可能的值有"start"、"end"、"left"、"right"和"center"。建议使用"start"和"end"，不要使用"left"和"right"，因为前两者的意思更稳妥，能同时适合从左到右和从右到左显示（阅读）的语言。
+    - textBaseline：表示文本的基线。可能的值有"top"、"hanging"、"middle"、"alphabetic"、"ideographic"和"bottom"。
+- 2D上下文提供了辅助确定文本大小的方法measureText()。
+  - 这个方法接收一个参数，即要绘制的文本；返回一个TextMetrics对象。
+  - 返回的对象目前只有一个width属性，但将来还会增加更多度量属性。
+  - measureText()方法利用font、textAlign和textBaseline的当前值计算指定文本的大小。
+- fillText和strokeText()方法都可以接收第四个参数，也就是文本的最大像素宽度。不过，这个可选的参数尚未得到所有浏览器支持（最早支持它的是Firefox 4）。提供这个参数后，调用fillText()或strokeText()时如果传入的字符串大于最大宽度，则绘制的文本字符的高度正确，但宽度会收缩以适应最大宽度。
+
+### 15.2.5 变换
+
+- 修改变换矩阵方法：
+
+  - rotate(angle)：围绕原点旋转图像angle弧度。
+
+  - scale(scaleX, scaleY)：缩放图像，在x方向乘以scaleX，在y方向乘以scaleY。scaleX和scaleY的默认值都是1.0。
+
+  - translate(x, y)：将坐标原点移动到(x,y)。执行这个变换之后，坐标(0,0)会变成之前由(x,y)表示的点。
+
+  - transform(m1*1, m1*2, m2*1, m2*2, dx, dy)：直接修改变换矩阵，方式是乘以如下矩阵:
+
+    ​
+
+  - setTransform(m1*1, m1*2, m2*1, m2*2, dx, dy)：将变换矩阵重置为默认状态，然后再调用transform()。
+
+- 有两个方法可以跟踪上下文的状态变化。如果你知道将来还要返回某组属性与变换的组合，可以调用save()方法。调用这个方法后，当时的所有设置都会进入一个栈结构，得以妥善保管。然后可以对上下文进行其他修改。等想要回到之前保存的设置时，可以调用restore()方法，在保存设置的栈结构中向前返回一级，恢复之前的状态。连续调用save()可以把更多设置保存到栈结构中，之后再连续调用restore()则可以一级一级返回。
+
+  > 需要注意的是，save()方法保存的只是对绘图上下文的设置和变换，不会保存绘图上下文的内容。
+
+### 15.2.6 绘制图像
+
+- drawImage()方法 : 把一幅图像绘制到画布上
+
+  - 最简单的调用方式是传入一个HTML <img>元素，以及绘制该图像的起点的x和y坐标。
+  - 如果你想改变绘制后图像的大小，可以再多传入两个参数，分别表示目标宽度和目标高度。通过这种方式来缩放图像并不影响上下文的变换矩阵。
+  - 还可以选择把图像中的某个区域绘制到上下文中。drawImage()方法的这种调用方式总共需要传入9个参数：要绘制的图像、源图像的x坐标、源图像的y坐标、源图像的宽度、源图像的高度、目标图像的x坐标、目标图像的y坐标、目标图像的宽度、目标图像的高度。
+  - 除了给drawImage()方法传入HTML <img>元素外，还可以传入另一个<canvas>元素作为其第一个参数。这样，就可以把另一个画布内容绘制到当前画布上。
+
+- 操作的结果可以通过toDataURL()方法获得.不过，有一个例外，即图像不能来自其他域。如果图像来自其他域，调用 toDataURL()会抛出一个错误。
+
+  > toDataURL()是Canvas对象的方法，不是上下文对象的方法。
+
+### 15.2.7阴影
+
+- 2D上下文会根据以下几个属性的值，自动为形状或路径绘制出阴影
+  - shadowColor：用CSS颜色格式表示的阴影颜色，默认为黑色。
+  - shadowOffsetX：形状或路径x轴方向的阴影偏移量，默认为0。
+  - shadowOffsetY：形状或路径y轴方向的阴影偏移量，默认为0。
+  - shadowBlur：模糊的像素数，默认0，即不模糊。
+- 不同浏览器对阴影的支持有一些差异。IE9、Firefox 4和Opera 11的行为最为规范，其他浏览器多多少少会有一些奇怪的现象，甚至根本不支持阴影。
+
+### 15.2.8渐变
+
+- 要创建一个新的线性渐变，可以调用createLinearGradient()方法。
+  - 这个方法接收4个参数：起点的x坐标、起点的y坐标、终点的x 坐标、终点的y 坐标。
+  - 调用这个方法后，它就会创建一个指定大小的渐变，并返回CanvasGradient对象的实例。
+- 创建了渐变对象后，下一步就是使用addColorStop()方法来指定色标。
+  - 这个方法接收两个参数：色标位置和CSS颜色值。色标位置是一个0（开始的颜色）到1（结束的颜色）之间的数字。
+- 由于渐变不重复，所以矩形的大部分区域都是黑色。确保渐变与形状对齐非常重要，有时候可以考虑使用函数来确保坐标合适。
+- 要创建径向渐变（或放射渐变），可以使用createRadialGradient()方法。
+  - 这个方法接收6个参数，对应着两个圆的圆心和半径。前三个参数指定的是起点圆的原心（x和y）及半径，后三个参数指定的是终点圆的原心（x和y）及半径。
+  - 圆柱、圆锥、同心圆
+
+### 15.2.9模式
+
+- 模式其实就是重复的图像，可以用来填充或描边图形。创建一个新模式，可以调用createPattern()方法并传入两个参数：
+  - 一个HTML <img>元素和一个表示如何重复图像的字符串。
+  - 第二个参数的值与CSS的background-repeat属性值相同，包括"repeat"、"repeat-x"、"repeat-y"和"no-repeat"。
+- 模式与渐变一样，都是从画布的原点(0,0)开始的。将填充样式（fillStyle）设置为模式对象，只表示在某个特定的区域内显示重复的图像，而不是要从某个位置开始绘制重复的图像。
+- createPattern()方法的第一个参数也可以是一个<video>元素，或者另一个<canvas>元素。
+
+### 15.2.10 使用图像数据
+
+- 2D上下文的一个明显的长处就是，可以通过getImageData()取得原始图像数据。
+  - 这个方法接收4个参数：要取得其数据的画面区域的x和y坐标以及该区域的像素宽度和高度。
+  - 返回的每个ImageData对象都有三个属性：width、height和data。
+    - 其中data属性是一个数组，保存着图像中每一个像素的数据。在data数组中，每一个像素用4个元素来保存，分别表示红、绿、蓝和透明度值。
+    - 因此，第一个像素的数据就保存在数组的第0到第3个元素中
+    - 通过修改图像数据，可以创建一个简单的灰阶过滤器等。
+- 只有在画布“干净”的情况下（即图像并非来自其他域），才可以取得图像数据。如果画布“不干净”，那么访问图像数据时会导致JavaScript错误。
+
+### 15.2.11合成
+
+- globalAlpha是一个介于0和1之间的值（包括0和1），用于指定所有绘制的透明度。默认值为0。如果所有后续操作都要基于相同的透明度，就可以先把globalAlpha设置为适当值，然后绘制，最后再把它设置回默认值0。
+- globalCompositionOperation表示后绘制的图形怎样与先绘制的图形结合。这个属性的值是字符串，可能的值如下：
+  - source-over（默认值）：后绘制的图形位于先绘制的图形上方。
+  - source-in：后绘制的图形与先绘制的图形重叠的部分可见，两者其他部分完全透明。
+  - source-out：后绘制的图形与先绘制的图形不重叠的部分可见，先绘制的图形完全透明。
+  - source-atop：后绘制的图形与先绘制的图形重叠的部分可见，先绘制图形不受影响。
+  - destination-over：后绘制的图形位于先绘制的图形下方，只有之前透明像素下的部分才可见。
+  - destination-in：后绘制的图形位于先绘制的图形下方，两者不重叠的部分完全透明。
+  - destination-out：后绘制的图形擦除与先绘制的图形重叠的部分。
+  - destination-atop：后绘制的图形位于先绘制的图形下方，在两者不重叠的地方，先绘制的图形会变透明。
+  - lighter：后绘制的图形与先绘制的图形重叠部分的值相加，使该部分变亮。
+  - copy：后绘制的图形完全替代与之重叠的先绘制图形。
+  - xor：后绘制的图形与先绘制的图形重叠的部分执行“异或”操作。
+- 在使用globalCompositionOperation的情况下，一定要多测试一些浏览器。因为不同浏览器对这个属性的实现仍然存在较大的差别。Safari和Chrome在这方面还有问题
+
+## 15.3  WebGL
+
+- WebGL是针对Canvas的3D上下文。与其他Web技术不同，WebGL并不是W3C制定的标准，而是由Khronos Group制定的。
+
+### 15.3.1 类型化数组
+
+- WebGL涉及的复杂计算需要提前知道数值的精度，而标准的JavaScript数值无法满足需要。为此，WebGL引入了一个概念，叫类型化数组（typed arrays）。
+- 类型化数组的核心就是一个名为ArrayBuffer的类型。每个ArrayBuffer对象表示的只是内存中指定的字节数，但不会指定这些字节用于保存什么类型的数据。通过ArrayBuffer所能做的，就是为了将来使用而分配一定数量的字节。
+- 创建了ArrayBuffer 对象后，能够通过该对象获得的信息只有它包含的字节数，方法是访问其 byteLength属性
+
+#### 1. 视图
+
+- 使用ArrayBuffer（数组缓冲器类型）的一种特别的方式就是用它来创建数组缓冲器视图。其中，最常见的视图是DataView，通过它可以选择ArrayBuffer中一小段字节。为此，可以在创建DataView实例的时候传入一个ArrayBuffer、一个可选的字节偏移量（从该字节开始选择）和一个可选的要选择的字节数。
+
+- 实例化之后，DataView 对象会把字节偏移量以及字节长度信息分别保存在byteOffset 和byteLength属性中。
+
+- 读取和写入DataView的时候，要根据实际操作的数据类型，选择相应的getter和setter方法。
+
+  | 数据类型     | getter                              | setter                                   |
+  | -------- | ----------------------------------- | ---------------------------------------- |
+  | 有符号8位整数  | getInt8(byteOffset)                 | setInt8(byteOffset, value)               |
+  | 无符号8位整数  | getUint8(byteOffset)                | setUint8(byteOffset, value)              |
+  | 有符号16位整数 | getInt16(byteOffset,littleEndian)   | setInt16(byteOffset,value,littleEndian)  |
+  | 无符号16位整数 | getUint16(byteOffset,littleEndian)  | setUint16(byteOffset,value,littleEndian) |
+  | 有符号32位整数 | getInt32(byteOffset,littleEndian)   | setInt32(byteOffset,value,littleEndian)  |
+  | 无符号32位整数 | getUint32(byteOffset,littleEndian)  | setUint32(byteOffset,value,littleEndian) |
+  | 32位浮点数   | getFloat32(byteOffset,littleEndian) | setFloat32(byteOffset,value,littleEndian) |
+  | 64位浮点数   | getFloat64(byteOffset,littleEndian) | setFloat64(byteOffset,value,littleEndian) |
+
+  - 所有这些方法的第一个参数都是一个字节偏移量，表示要从哪个字节开始读取或写入。不要忘了，要保存有些数据类型的数据，可能需要不止1B。
+
+    view.setUint16(2, 50);//不能从字节1开始，因为16位整数要用2B
+
+  - 用于读写16位或更大数值的方法都有一个可选的参数littleEndian。这个参数是一个布尔值，表示读写数值时是否采用小端字节序（即将数据的最低有效位保存在低内存地址中），而不是大端字节序（即将数据的最低有效位保存在高内存地址中）。如果你也不确定应该使用哪种字节序，那不用管它，就采用默认的大端字节序方式保存即可。
+
+1. #### 类型化视图
+
+- 类型化视图一般也被称为类型化数组。类型化视图也分几种，而且它们都继承了DataView。
+  - Int8Array：表示8位二补整数。
+  - Uint8Array：表示8位无符号整数。
+  - Int16Array：表示16位二补整数。
+  - Uint16Array：表示16位无符号整数。
+  - Int32Array：表示32位二补整数。
+  - Uint32Array：表示32位无符号整数。
+  - Float32Array：表示32位IEEE浮点值。
+  - Float64Array：表示64位IEEE浮点值。
+- 由于这些视图都继承自DataView，因而可以使用相同的构造函数参数来实例化。第一个参数是要使ArrayBuffer对象，第二个参数是作为起点的字节偏移量（默认为0），第三个参数是要包含的字节数。三个参数中只有第一个是必需的。
+- 每个视图构造函数都有一个名为BYTES_PER_ELEMENT的属性，表示类型化数组的每个元素需要多少字节。因此，Uint8Array.BYTES_PER_ELEMENT就是1，而Float32Array.BYTES_PER_ELEMENT则为4。可以利用这个属性来辅助初始化。
+- 类型化视图的目的在于简化对二进制数据的操作。除了前面看到的优点之外，创建类型化视图还可以不用首先创建ArrayBuffer对象。只要传入希望数组保存的元素数，相应的构造函数就可以自动创建一个包含足够字节数的ArrayBuffer对象
+- 另外，也可以把常规数组转换为类型化视图，只要把常规数组传入类型化视图的构造函数即可这是用默认值来初始化类型化视图的最佳方式，也是WebGL项目中最常用的方式。
+- 数据类型不匹配时不会抛出错误，所以你必须自己保证所赋的值不会超过相应元素的字节限制。
+- 类型化视图还有一个方法，即subarray()，使用这个方法可以基于底层数组缓冲器的子集创建一个新视图。这个方法接收两个参数：开始元素的索引和可选的结束元素的索引。返回的类型与调用该方法的视图类型相同。
+- 通过大视图创建小视图的主要好处就是，在操作大数组中的一部分元素时，无需担心意外修改了其他元素。
+
+### 15.3.2 WebGL上下文
+
+- 目前，在支持的浏览器中，WebGL的名字叫"experimental-webgl"，这是因为WebGL规范仍然未制定完成。制定完成后，这个上下文的名字就会变成简单的"webgl"。如果浏览器不支持WebGL，那么取得该上下文时会返回null。
+- 一般都把WebGL上下文对象命名为gl。
+- 通过给getContext()传递第二个参数，可以为WebGL上下文设置一些选项。这个参数本身是一个对象，可以包含下列属性。
+  - alpha：值为true，表示为上下文创建一个Alpha通道缓冲区；默认值为true。
+  - depth：值为true，表示可以使用16位深缓冲区；默认值为true。
+  - stencil：值为true，表示可以使用8位模板缓冲区；默认值为false。
+  - antialias：值为true，表示将使用默认机制执行抗锯齿操作；默认值为true。
+  - premultipliedAlpha：值为true，表示绘图缓冲区有预乘Alpha值；默认值为true。
+  - preserveDrawingBuffer：值 为true，表示在绘图完成后保留绘图缓冲区；默认值为false。建议确实有必要的情况下再开启这个值，因为可能影响性能。
+
+#### 1. 常量
+
+- 常量在OpenGL中都带前缀GL*。在WebGL中，保存在上下文对象中的这些常量都没有GL*前缀。WebGL以这种方式支持大多数OpenGL常量（有一部分常量是不支持的）。
+
+#### 2. 方法命名
+
+- 如果某方法可以接收不同类型及不同数量的参数，看方法名的后缀就可以知道。方法名的后缀会包含参数个数（1到4）和接收的数据类型（f表示浮点数，i表示整数）。
+- 有很多方法接收数组参数而非一个个单独的参数。这样的方法其名字中会包含字母v（即vector，矢量）。
+
+#### 3. 准备绘图
+
+- 在实际操作WebGL上下文之前，一般都要使用某种实色清除<canvas>,首先必须使用clearColor()方法来指定要使用的颜色值，该方法接收4个参数：红、绿、蓝和透明度。每个参数必须是一个0到1之间的数值，表示每种分量在最终颜色中的强度。
+
+- ​
+
+  ``
+
+  ​
+
+  ​
+
+  ​
+
+  ​
+
+  ```
+  gl.clearColor(0,0,0,1); //black 
+  ```
+
+  ```
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  ```
+
+  ​
+
+  > 把清理颜色缓冲区的值设置为黑色，然后调用了clear()方法，这个方法与OpenGL中的glClear()等价。传入的参数gl.COLOR_BUFFER_BIT告诉WebGL使用之前定义的颜色来填充相应区域。一般来说，都要先清理缓冲区，然后再执行其他绘图操作。
+
+#### 4. 视口与坐标
+
+- 默认情况下，视口可以使用整个<canvas>区域。要改变视口大小，可以调用viewport()方法并传入4个参数：（视口相对于<canvas>元素的）x坐标、y坐标、宽度和高度。
+- 视口坐标与我们通常熟悉的网页坐标不一样。视口坐标的原点(0,0)在<canvas>元素的左下角，x轴和y轴的正方向分别是向右和向上，可以定义为(width1, height1)
+- 视口内部的坐标系与定义视口的坐标系也不一样。在视口内部，坐标原点(0,0)是视口的中心
+- 如果在视口内部绘图时使用视口外部的坐标，结果可能会被视口剪切。
+
+#### 5. 缓冲区
+
+- 顶点信息保存在JavaScript的类型化数组中，使用之前必须转换到WebGL的缓冲区。
+- 要创建缓冲区，可以调用gl.createBuffer()，然后使用gl.bindBuffer()绑定到WebGL上下文。
+- gl.bufferData()的最后一个参数用于指定使用缓冲区的方式，取值范围是如下几个常量。
+  - gl.STATIC_DRAW：数据只加载一次，在多次绘图中使用。
+  - gl.STREAM_DRAW：数据只加载一次，在几次绘图中使用。
+  - gl.DYNAMIC_DRAW：数据动态改变，在多次绘图中使用。
+- 如果不是非常有经验的OpenGL程序员，多数情况下将缓冲区使用方式设置为gl.STATIC_DRAW即可。
+- 在包含缓冲区的页面重载之前，缓冲区始终保留在内存中。如果你不想要某个缓冲区了，可以直接调用gl.deleteBuffer()释放内存：
+
+#### 6. 错误
+
+- JavaScript与WebGL之间的一个最大的区别在于，WebGL操作一般不会抛出错误。为了知道是否有错误发生，必须在调用某个可能出错的方法后，手工调用gl.getError()方法。这个方法返回一个表示错误类型的常量。可能的错误常量如下。
+  - gl.NO_ERROR：上一次操作没有发生错误（值为0）。
+  - gl.INVALID_ENUM：应该给方法传入WebGL常量，但却传错了参数。
+  - gl.INVALID_VALUE：在需要无符号数的地方传入了负值。
+  - gl.INVALID_OPERATION：在当前状态下不能完成操作。
+  - gl.OUT_OF_MEMORY：没有足够的内存完成操作。
+  - gl.CONTEXT_LOST_WEBGL：由于外部事件（如设备断电）干扰丢失了当前WebGL上下文。
+
+####  7. 着色器
+
+- 着色器（shader）是OpenGL中的另一个概念。WebGL中有两种着色器：顶点着色器和片段（或像素）着色器。
+  - 顶点着色器用于将3D顶点转换为需要渲染的2D点。
+  - 片段着色器用于准确计算要绘制的每个像素的颜色。
+- 这些着色器是使用GLSL（OpenGL Shading Language，OpenGL着色语言）写的，GLSL是一种与C和JavaScript完全不同的语言。
+
+#### 8. 编写着色器
+
+- GLSL是一种类C语言，专门用于编写OpenGL着色器。
+- 每个着色器都有一个main()方法，该方法在绘图期间会重复执行。为着色器传递数据的方式有两种：Attribute和Uniform。通过Attribute可以向顶点着色器中传入顶点信息，通过Uniform可以向任何着色器传入常量值。Attribute和Uniform在main()方法外部定义，分别使用关键字attribute 和uniform。在这两个值类型关键字之后，是数据类型和变量名。
+
+#### 9. 编写着色器程序
+
+- 浏览器不能理解GLSL程序，因此必须准备好字符串形式的GLSL程序，以便编译并链接到着色器程序。为便于使用，通常是把着色器包含在页面的<script>标签内，并为该标签指定一个自定义的type属性。
+- 然后，可以通过text属性提取出<script>元素的内容
+- 复杂一些的WebGL应用可能会通过Ajax（详见第21章）动态加载着色器。而使用着色器的关键是要有字符串形式的GLSL程序。
+- 取得了GLSL字符串之后，接下来就是创建着色器对象。要创建着色器对象，可以调用gl.createShader()方法并传入要创建的着色器类型（gl.VERTEX_SHADER或gl.FRAGMENT_SHADER）。编译着色器使用的是gl.compileShader()。
+- 然后把对象链接到着色器程序中（gl.attachShader）。最后调用gl.linkProgram()则把两个着色器封装到了变量program中。链接完程序之后，就可以通过gl.useProgram()方法通知WebGL使用这个程序了。
+- 调用gl.useProgram()方法后，所有后续的绘图操作都将使用这个程序。
+
+#### 10. 为着色器传入值
+
+- 对于Uniform变量，可以使用gl.getUniformLocation()，这个方法返回一个对象，表示Uniform变量在内存中的位置。然后可以基于变量的位置来赋值。
+- 对于顶点着色器中的Attribute变量，也是差不多的赋值过程。要找到Attribute变量在内存中的位置，可以调用gl.getAttribLocation()。取得了位置之后，然后又通过gl.enableVertexAttribArray()启用它。最后一行创建了指针，指向由gl.bindBuffer()指定的缓冲区，并将其保存在aVertexPosition中，以便顶点着色器使用。
+
+#### 11. 调试着色器和程序
+
+- 与WebGL中的其他操作一样，着色器操作也可能会失败，而且也是静默失败。如果你想知道着色器或程序执行中是否发生了错误，必须亲自询问WebGL上下文。
+
+- 对于着色器，可以在操作之后调用gl.getShaderParameter()，取得着色器的编译状态：
+
+  ​
+
+  ```
+
+  ```
+
+  ​
+
+  ​
+
+  ​
+
+  ​
+
+  ```
+  if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)){
+  ```
+
+  ```
+      alert(gl.getShaderInfoLog(vertexShader));
+  ```
+
+  ```
+  }
+  ```
+
+  ​
+
+- 程序也可能会执行失败，因此也有类似的方法——gl.getProgramParameter()，可以用来检测执行状态。最常见的程序失败发生在链接过程中，要检测链接错误，可以使用下列代码。
+
+  ​
+
+  ```
+
+  ```
+
+  ​
+
+  ​
+
+  ​
+
+  ​
+
+  ```
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)){
+  ```
+
+  ```
+      alert(gl.getProgramInfoLog(program));
+  ```
+
+  ```
+  }
+  ```
+
+  ​
+
+- 与gl.getShaderParameter()类似，gl.getProgramParameter()返回true表示链接成功，返回false表示链接失败。同样，也有一个gl.getProgramInfoLog()方法，用于捕获程序失败的消息。
+
+#### 12. 绘图
+
+- WebGL只能绘制三种形状：点、线和三角。
+- 执行绘图操作要调用gl.drawArrays()或gl.drawElements()方法，前者用于数组缓冲区，后者用于元素数组缓冲区。它们的第一个参数都是一个常量，表示要绘制的形状。可取值的常量范围包括以下这些：
+  - gl.POINTS：将每个顶点当成一个点来绘制。
+  - gl.LINES：将数组当成一系列顶点，在这些顶点间画线。每个顶点既是起点也是终点，因此数组中必须包含偶数个顶点才能完成绘制。
+  - gl.LINE_LOOP：将数组当成一系列顶点，在这些顶点间画线。线条从第一个顶点到第二个顶点，再从第二个顶点到第三个顶点，依此类推，直至最后一个顶点。然后再从最后一个顶点到第一个顶点画一条线。结果就是一个形状的轮廓。
+  - gl.LINE_STRIP：除了不画最后一个顶点与第一个顶点之间的线之外，其他与gl.LINE_LOOP相同。
+  - gl.TRIANGLES：将数组当成一系列顶点，在这些顶点间绘制三角形。除非明确指定，每个三角形都单独绘制，不与其他三角形共享顶点。
+  - gl.TRIANGLES_STRIP：除了将前三个顶点之后的顶点当作第三个顶点与前两个顶点共同构成一个新三角形外，其他都与gl.TRIANGLES相同。
+  - gl. TRIANGLES_FAN：除了将前三个顶点之后的顶点当作第三个顶点与前一个顶点及第一个顶点共同构成一个新三角形外，其他都与gl.TRIANGLES相同。
+- gl.drawArrays()方法接收上面列出的常量中的一个作为第一个参数，接收数组缓冲区中的起始索引作为第二个参数，接收数组缓冲区中包含的顶点数（点的集合数）作为第三个参数。
+
+#### 13. 纹理
+
+- WebGL的纹理可以使用DOM中的图像。要创建一个新纹理，可以调用gl.createTexture()，然后再将一幅图像绑定到该纹理。
+
+- 如果图像尚未加载到内存中，可能需要创建一个Image对象的实例，以便动态加载图像。图像加载完成之前，纹理不会初始化，因此，必须在load事件触发后才能设置纹理。
+
+- 与在OpenGL中创建纹理的步骤最大的差异是使用gl.pixelStore1()设置像素存储格式。gl.UNPACK_FLIP_Y_WEBGL是WebGL独有的常量，在加载Web中的图像时，多数情况下都必须使用这个常量。这主要是因为GIF、JPEG和PNG图像与WebGL使用的坐标系不一样，如果没有这个标志，解析图像时就会发生混乱。
+
+- 用作纹理的图像必须与包含页面来自同一个域，或者是保存在启用了CORS（Cross-Origin Resource Sharing，跨域资源共享）的服务器上。
+
+  > 图像、加载到<video>元素中的视频，甚至其他<canvas>元素都可以用作纹理。跨域资源限制同样适用于视频
+
+#### 14. 读取像素
+
+- 通过WebGL上下文也能读取像素值。读取像素值的方法readPixels()与OpenGL中的同名方法只有一点不同，即最后一个参数必须是类型化数组。像素信息是从帧缓冲区读取的，然后保存在类型化数组中。
+- readPixels()方法的参数有：x、y、宽度、高度、图像格式、数据类型和类型化数组。
+  - 前4个参数指定读取哪个区域中的像素。
+  - 图像格式参数几乎总是gl.RGBA。
+  - 数据类型参数用于指定保存在类型化数组中的数据的类型，但有以下限制。
+    - 如果类型是gl.UNSIGNED_BYTE，则类型化数组必须是Uint8Array。
+    - 如果类型是gl.UNSIGNED_SHORT*5*6*5、gl.UNSIGNED_SHORT*4*4*4*4 或 gl.UNSIGNED* SHORT*5*5*5*1，则类型化数组必须是Uint16Array。
+- 如果想在绘制发生后读取像素数据，那在初始化WebGL上下文时必须传入适当的preserveDrawingBuffer选项。设置这个标志的意思是让帧缓冲区在下一次绘制之前，保留其最后的状态。这个选项会导致性能损失，因此能不用最好不要用。
+
+### 15.3.3支持
+
+- Firefox 4+和Chrome都实现了WebGL API。Safari 5.1也实现了WebGL，但默认是禁用的。
+- WebGL比较特别的地方在于，某个浏览器的某个版本实现了它，并不一定意味着就真能使用它。某个浏览器支持WebGL，至少意味着两件事：首先，浏览器本身必须实现了WebGL API；其次，计算机必须升级显示驱动程序。从稳妥的角度考虑，在使用WebGL之前，最好检测其是否得到了支持，而不是只检测特定的浏览器版本。
+- 可以说，WebGL目前只适合实验性地学习，不适合真正开发和应用。
+
+### 15.4 小结
 
 
 
