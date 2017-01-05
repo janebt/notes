@@ -412,7 +412,7 @@ PS：
 - 这4个操作符对任何值都适用，遵循下列规则
   -  在应用于一个包含有效数字字符的字符串时，先将其转换为数字值，再执行加减1的操作。字符串变量变成数值变量。
   -  在应用于一个不包含有效数字字符的字符串时，将变量的值设置为NaN
-             字符串变量变成数值变量。
+              字符串变量变成数值变量。
   -  在应用于布尔值false时，先将其转换为0再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于布尔值true时，先将其转换为1再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于浮点数值时，执行加减1的操作。
@@ -1692,6 +1692,9 @@ function isHostMethod(object, property) {
 
 ## 9.4 小结
 
+- ​
+
+
 # 第10章 DOM
 
 - 注意，IE中的所有DOM对象都是以COM对象的形式实的。这意味着IE中的DOM对象与原生JavaScript对象的行为或活动特点并不一致。
@@ -1742,15 +1745,503 @@ function isHostMethod(object, property) {
 - 每个节点都有一个childNodes属性，其中保存着一个NodeList对象。NodeList是一种类数组对象，用于保存一组有序的节点，可以通过位置来访问这些节点。
 - 请注意，虽然可以通过方括号语法来访问NodeList的值，而且这个对象也有length属性，但它并不是Array的实例。NodeList对象的独特之处在于，它实际上是基于DOM结构动态执行查询的结果，因此DOM结构的变化能够自动反映在NodeList对象中。
 - 访问保存在NodeList中的节点——可以通过方括号，也可以使用item()方法。
+- 对arguments对象使用Array.prototype.slice()方法可以将其转换为数组。由于IE8及更早版本将NodeList
+  实现为一个COM对象，而我们不能像使用JScript对象那样使用这种对象。要想在IE中将NodeList转换为数组，必须手动枚举所有成员。
+- 每个节点都有一个parentNode属性，该属性指向文档树中的父节点。
+- 包含在childNodes列表中的每个节点相互之间都是同胞节点。通过使用列表中每个节点的previousSibling
+  和nextSibling属性，可以访问同一列表中的其他节点。列表中第一个节点的previousSibling属性值为null，而列表中最后一个节点的nextSibling属性的值同样也为null
+- 父节点与其第一个和最后一个子节点之间也存在特殊关系。父节点的firstChild和lastChild属性分别指向其childNodes列表中的第一个和最后一个节点。如果没有子节点，那么firstChild和lastChild的值均为null。
+- hasChildNodes()也是一个非常有用的方法，这个方法在节点包含一或多个子节点的情况下返回true；应该说，这是比查询childNodes列表的length属性更简单的方法。
+- 所有节点都有的最后一个属性是ownerDocument，该属性指向表示整个文档的文档节点。这种关系表示的是任何节点都属于它所在的文档，任何节点都不能同时存在于两个或更多个文档中。通过这个属性，我们可以不必在节点层次中通过层层回溯到达顶端，而是可以直接访问文档节点。
 
+#### 3. 操作节点
 
+- 最常用的方法是appendChild()，用于向childNodes列表的末尾添加一个节点。添加节点后，childNodes的新增节点、父节点及以前的最后一个子节点的关系指针都会相应地得到更新。
+- 如果需要把节点放在childNodes 列表中某个特定的位置上，而不是放在末尾，那么可以使用insertBefore()方法。这个方法接受两个参数：要插入的节点和作为参照的节点。插入节点后，被插入的节点会变成参照节点的前一个同胞节点（previousSibling），同时被方法返回。如果参照节点是null，则insertBefore()与appendChild()执行相同的操作
+- replaceChild()方法接受的两个参数是：要插入的节点和要替换的节点。要替换的节点将由这个方法返回并从文档树中被移除，同时由要插入的节点占据其位置。
+- 如果只想移除而非替换节点，可以使用removeChild()方法。这个方法接受一个参数，即要移除的节点。被移除的节点将成为方法的返回值
+- 四个方法操作的都是某个节点的子节点，另外，并不是所有类型的节点都有子节点，如果在不支持子节点的节点上调用了这些方法，将会导致错误发生。
 
+#### 4. 其他方法
 
+- 有两个方法是所有类型的节点都有的。第一个就是cloneNode()，用于创建调用这个方法的节点的一个完全相同的副本。
+  - cloneNode()方法接受一个布尔值参数，表示是否执行深复制。
+    - 在参数为true的情况下，执行深复制，也就是复制节点及其整个子节点树；
+    - 在参数为false的情况下，执行浅复制，即只复制节点本身。复制后返回的节点副本属于文档所有，但并没有为它指定父节点。因此，这个节点副本就成为了一个“孤儿”，除非通过appendChild()、insertBefore()或replaceChild()将它添加到文档中。
 
+> cloneNode()方法不会复制添加到DOM节点中的JavaScript属性，例如事件处
+> 理程序等。这个方法只复制特性、（在明确指定的情况下也复制）子节点，其他一切
+> 都不会复制。IE在此存在一个bug，即它会复制事件处理程序，所以我们建议在复制
+> 之前最好先移除事件处理程序。
 
+- normalize()方法，这个方法唯一的作用就是处理文档树中的文本节点。
+  - 由于解析器的实现或DOM操作等原因，可能会出现文本节点不包含文本，或者接连出现两个文本节点的情况。当在某个节点上调用这个方法时，就会在该节点的后代节点中查找上述两种情况。如果找到了空文本节点，则删除它；如果找到相邻的文本节点，则将它们合并为一个文本节点。
 
+### 10.1.2 Document类型
 
+- 在浏览器中，document对象是HTMLDocument（继承自Document类型）的一个实例，表示整个HTML页面。而且，document对象是window对象的一个属性，因此可以将其作为全局对象来访问。
+- Document节点具有下列特征：
+  - nodeType的值为9；
+  - nodeName的值为"#document"；
+  - nodeValue的值为null；
+  - parentNode的值为null；
+  - ownerDocument的值为 null；
+  - 其子节点可能是一个DocumentType（最多一个）、Element（最多一个）、ProcessingInstruction或Comment。
 
+#### 1. 文档的子节点
+
+- 虽然DOM标准规定Document节点的子节点可以是DocumentType、Element、ProcessingInstruction或Comment，但还有两个内置的访问其子节点的快捷方式。
+
+  - 第一个就是documentElement属性，该属性始终指向HTML页面中的<html>元素。
+  - 另一个就是通过childNodes列表访问文档元素，但通过documentElement属性则能更快捷、更直接地访问该元素。
+
+- 作为HTMLDocument的实例，document对象还有一个body属性，直接指向<body>元素。因为开发人员经常要使用这个元素，所以document.body在JavaScript代码中出现的频率非常高，其用法如下。
+  `var body = document.body; //取得对<body>的引用`
+
+- 所有浏览器都支持document.documentElement和document.body属性。
+
+- Document另一个可能的子节点是DocumentType。通常将<!DOCTYPE>标签看成一个与文档其他部分不同的实体，可以通过doctype属性（在浏览器中是document.doctype）来访问它的信息。
+
+  `var doctype = document.doctype; //取得对<!DOCTYPE>的引用`
+
+- 浏览器对document.doctype的支持差别很大:
+
+  - IE8 及之前版本：如果存在文档类型声明，会将其错误地解释为一个注释并把它当作Comment节点；而document.doctype的值始终为null。
+  - IE9+及Firefox：如果存在文档类型声明，则将其作为文档的第一个子节点；document.doctype是一个DocumentType节点，也可以通过document.firstChild或document.childNodes[0]访问同一个节点。
+  - Safari、Chrome和Opera：如果存在文档类型声明，则将其解析，但不作为文档的子节点。document.doctype是一个DocumentType节点，但该节点不会出现在document.childNodes中。
+
+- 从技术上说，出现在<html>元素外部的注释应该算是文档的子节点。然而，不同的浏览器在是否解析这些注释以及能否正确处理它们等方面，也存在很大差异。
+
+  - IE8及之前版本、Safari 3.1及更高版本、Opera和Chrome只为第一条注释创建节点，不为第二条注释创建节点。结果，第一条注释就会成为document.childNodes中的第一个子节点。
+  - IE9及更高版本会将第一条注释创建为document.childNodes中的一个注释节点，也会将第二条注释创建为document.childNodes中的注释子节点。
+  - Firefox以及Safari 3.1之前的版本会完全忽略这两条注释。
+
+#### 2. 文档信息
+
+- title属性
+  - 包含着<title>元素中的文本——显示在浏览器窗口的标题栏或标签页上。
+  - 通过这个属性可以取得当前页面的标题，也可以修改当前页面的标题并反映在浏览器的标题栏中。
+  - 修改title属性的值不会改变<title>元素。
+- URL
+  - URL属性中包含页面完整的URL（即地址栏中显示的URL）
+- domain
+  - domain属性中只包含页面的域名
+- referrer
+  - referrer属性中则保存着链接到当前页面的那个页面的URL。
+  - 在没有来源页面的情况下，referrer属性中可能会包含空字符串。
+- URL与domain属性是相互关联的。
+- 在这3个属性中，只有domain是可以设置的。但由于安全方面的限制，也并非可以给domain设置任何值。不能将这个属性设置为URL中不包含的域
+- 当页面中包含来自其他子域的框架或内嵌框架时，能够设置document.domain就非常方便了。由于跨域安全限制，来自不同子域的页面无法通过JavaScript 通信。而通过将每个页面的document.domain设置为相同的值，这些页面就可以互相访问对方包含的JavaScript对象了。
+- 浏览器对domain属性还有一个限制，即如果域名一开始是“松散的”（loose），那么不能将它再设置为“紧绷的”（tight）。换句话说，在将document.domain设置为"wrox.com"之后，就不能再将其设置回"p2p.wrox.com"，否则将会导致错误
+
+#### 3. 查找元素
+
+- 取得元素的操作：getElementById()和getElementsByTagName()
+- getElementById()
+  - 接收一个参数：要取得的元素的ID。
+  - 如果找到相应的元素则返回该元素，如果不存在带有相应ID的元素，则返回null。
+  - 注意，这里的ID必须与页面中元素的id特性（attribute）严格匹配，包括大小写。(IE8及较低版本不区分ID的大小写)
+  - 如果页面中多个元素的ID值相同，getElementById()只返回文档中第一次出现的元素。IE7及较低版本还为此方法添加了一个有意思的“怪癖”：name 特性与给定ID 匹配的表单元素（<input>、<textarea>、<button>及<select>）也会被该方法返回。
+- getElementsByTagName()
+  - 接受一个参数，即要取得元素的标签名，而返回的是包含零或多个元素的NodeList。
+  - 在HTML文档中，这个方法会返回一个HTMLCollection对象，作为一个“动态”集合，该对象与NodeList非常类似
+  - HTMLCollection对象还有一个方法，叫做namedItem()，使用这个方法可以通过元素的name特性取得集合中的项。
+  - 要想取得文档中的所有元素，可以向getElementsByTagName()中传入"*"。按照它们出现的先后顺序。
+- getElementsByName()
+  - 只有HTMLDocument类型才有的方法
+  - 最常使用getElementsByName()方法的情况是取得单选按钮；为了确保发送给浏览器的值正确无误，所有单选按钮必须具有相同的name特性
+  - 与getElementsByTagName()类似，getElementsByName()方法也会返回一个HTMLCollectioin。
+  - 但是，对于这里的单选按钮来说，namedItem()方法则只会取得第一项（因为每一项的name特性都相同）
+
+#### 4. 特殊集合
+
+- document对象还有一些特殊的集合，都是HTMLCollection对象，为访问文档常用的部分提供了快捷方式
+  - document.anchors，包含文档中所有带name特性的<a>元素；
+  - document.applets，包含文档中所有的<applet>元素，因为不再推荐使用<applet>元素，所以这个集合已经不建议使用了；
+  - document.forms，包含文档中所有的<form>元素，与document.getElementsByTagName("form")得到的结果相同；
+  - document.images，包含文档中所有的<img>元素，与document.getElementsByTagName ("img")得到的结果相同；
+  - document.links，包含文档中所有带href特性的<a>元素。
+
+#### 5. DOM一致性检测
+
+- document.implementation属性就是为检测浏览器实现了DOM的哪些部分提供相应信息和功能的对象，与浏览器对DOM的实现直接对应。
+
+- DOM1级只为document.implementation规定了一个方法，即hasFeature()。
+
+  - 这个方法接受两个参数：要检测的DOM功能的名称及版本号。
+
+  - 如果浏览器支持给定名称和版本的功能，则该方法返回true
+
+    | 功 能            | 版 本 号       | 说 明                             |
+    | -------------- | ----------- | ------------------------------- |
+    | Core           | 1.0、2.0、3.0 | 基本的DOM，用于描述表现文档的节点树             |
+    | XML            | 1.0、2.0、3.0 | Core的XML扩展，添加了对CDATA、处理指令及实体的支持 |
+    | HTML           | 1.0、2.0     | XML的HTML扩展，添加了对HTML特有元素及实体的支持   |
+    | Views          | 2.0         | 基于某些样式完成文档的格式化                  |
+    | StyleSheets    | 2.0         | 将样式表关联到文档                       |
+    | CSS            | 2.0         | 对层叠样式表1级的支持                     |
+    | CSS2           | 2.0         | 对层叠样式表2级的支持                     |
+    | Events         | 2.0，3.0     | 常规的DOM事件                        |
+    | UIEvents       | 2.0，3.0     | 用户界面事件                          |
+    | MouseEvents    | 2.0，3.0     | 由鼠标引发的事件（click、mouseover等）      |
+    | MutationEvents | 2.0，3.0     | DOM树变化时引发的事件                    |
+    | HTMLEvents     | 2.0         | HTML4.01事件                      |
+    | Range          | 2.0         | 用于操作DOM树中某个范围的对象和方法             |
+    | Traversal      | 2.0         | 遍历DOM树的方法                       |
+    | LS             | 3.0         | 文件与DOM树之间的同步加载和保存               |
+    | LS-Async       | 3.0         | 文件与DOM树之间的异步加载和保存               |
+    | Validation     | 3.0         | 在确保有效的前提下修改DOM树的方法              |
+
+  - hasFeature()也有缺点，因为实现者可以自行决定是否与DOM规范的不同部分保持一致。建议多数情况下，在使用DOM的某些特殊的功能之前，最好除了检测hasFeature()之外，还同时使用能力检测。
+
+#### 6. 文档写入
+
+- 将输出流写入到网页中：write()、writeln()、open()和close()。
+- write()和writeln()方法都接受一个字符串参数，即要写入到输出流中的文本。write()会原样写入，而writeln()则会在字符串的末尾添加一个换行符（\n）。在页面被加载的过程中，可以使用这两个方法向页面中动态地
+  加入内容
+- 还可以使用write()和writeln()方法动态地包含外部资源，例如JavaScript文件等。在包含JavaScript文件时，必须注意不能像下面的例子那样直接包含字符串"</script>"，因为这会导致该字符串被解释为脚本块的结束，它后面的代码将无法执行。（使用"<\/script>"）
+- 如果在文档加载结束后再调用document.write()，那么输出的内容将会重写整个页面
+- 方法open()和close()分别用于打开和关闭网页的输出流。如果是在页面加载期间使用write()或writeln()方法，则不需要用到这两个方法
+
+> 严格型XHTML文档不支持文档写入。
+
+### 10.1.3 Element类型
+
+- Element类型用于表现XML或HTML元素，提供了对元素标签名、子节点及特性的访问。Element节点具有以下特征：
+  - nodeType的值为1；
+  - nodeName的值为元素的标签名；
+  - nodeValue的值为null；
+  - parentNode可能是Document或Element；
+  - 其子节点可能是Element、Text、Comment、ProcessingInstruction、CDATASection 或 EntityReference。
+- 要访问元素的标签名，可以使用nodeName属性，也可以使用tagName属性；这两个属性会返回相同的值。但可能会有大小写差别，因为在HTML中，标签名始终都以全部大写表示；而在XML（有时候也包括XHTML）中，标签名则始终会与源代码中的保持一致。
+
+#### 1. HTML元素
+
+- 所有HTML元素都由HTMLElement类型表示，不是直接通过这个类型，也是通过它的子类型来表示。HTMLElement类型直接继承自Element并添加了一些属性。添加的这些属性分别对应于每个HTML元素中都存在的下列标准特性。
+
+- id，元素在文档中的唯一标识符。
+
+- title，有关元素的附加说明信息，一般通过工具提示条显示出来。
+
+- lang，元素内容的语言代码，很少使用。
+
+- dir，语言的方向，值为"ltr"（left-to-right，从左至右）或"rtl"（right-to-left，从右至左），也很少使用。
+
+- className，与元素的class特性对应，即为元素指定的CSS类。没有将这个属性命名为class，是因为class是ECMAScript的保留字
+
+- 所有HTML元素以及与之关联的类型：
+
+  | 元 素        | 类 型                     | 元 素      | 类 型                 |
+  | ---------- | ----------------------- | -------- | ------------------- |
+  | A          | HTMLAnchorElement       | EM       | HTMLElement         |
+  | ABBR       | HTMLElement             | FIELDSET | HTMLFieldSetElement |
+  | ACRONYM    | HTMLElement             | FONT     | HTMLFontElement     |
+  | ADDRESS    | HTMLElement             | FORM     | HTMLFormElement     |
+  | APPLET     | HTMLAppletElement       | FRAME    | HTMLFrameElement    |
+  | AREA       | HTMLAreaElement         | FRAMESET | HTMLFrameSetElement |
+  | B          | HTMLElement             | H1       | HTMLHeadingElement  |
+  | BASE       | HTMLBaseElement         | H2       | HTMLHeadingElement  |
+  | BASEFONT   | HTMLBaseFontElement     | H3       | HTMLHeadingElement  |
+  | BDO        | HTMLElement             | H4       | HTMLHeadingElement  |
+  | BIG        | HTMLElement             | H5       | HTMLHeadingElement  |
+  | BLOCKQUOTE | HTMLQuoteElement        | H6       | HTMLHeadingElement  |
+  | BODY       | HTMLBodyElement         | HEAD     | HTMLHeadElement     |
+  | BR         | HTMLBRElement           | HR       | HTMLHRElement       |
+  | BUTTON     | HTMLButtonElement       | HTML     | HTMLHtmlElement     |
+  | CAPTION    | HTMLTableCaptionElement | I        | HTMLElement         |
+  | CENTER     | HTMLElement             | IFRAME   | HTMLIFrameElement   |
+  | CITE       | HTMLElement             | IMG      | HTMLImageElement    |
+  | CODE       | HTMLElement             | INPUT    | HTMLInputElement    |
+
+  | COL      | HTMLTableColElement  | INS      | HTMLModElement          |
+  | -------- | -------------------- | -------- | ----------------------- |
+  | COLGROUP | HTMLTableColElement  | ISINDEX  | HTMLIsIndexElement      |
+  | DD       | HTMLElement          | KBD      | HTMLElement             |
+  | DEL      | HTMLModElement       | LABEL    | HTMLLabelElement        |
+  | DFN      | HTMLElement          | LEGEND   | HTMLLegendElement       |
+  | DIR      | HTMLDirectoryElement | LI       | HTMLLIElement           |
+  | DIV      | HTMLDivElement       | LINK     | HTMLLinkElement         |
+  | DL       | HTMLDListElement     | MAP      | HTMLMapElement          |
+  | DT       | HTMLElement          | MENU     | HTMLMenuElement         |
+  | META     | HTMLMetaElement      | STRONG   | HTMLElement             |
+  | NOFRAMES | HTMLElement          | STYLE    | HTMLStyleElement        |
+  | NOSCRIPT | HTMLElement          | SUB      | HTMLElement             |
+  | OBJECT   | HTMLObjectElement    | SUP      | HTMLElement             |
+  | OL       | HTMLOListElement     | TABLE    | HTMLTableElement        |
+  | OPTGROUP | HTMLOptGroupElement  | TBODY    | HTMLTableSectionElement |
+  | OPTION   | HTMLOptionElement    | TD       | HTMLTableCellElement    |
+  | P        | HTMLParagraphElement | TEXTAREA | HTMLTextAreaElement     |
+  | PARAM    | HTMLParamElement     | TFOOT    | HTMLTableSectionElement |
+  | PRE      | HTMLPreElement       | TH       | HTMLTableCellElement    |
+  | Q        | HTMLQuoteElement     | THEAD    | HTMLTableSectionElement |
+
+  | S      | HTMLElement       | TITLE | HTMLTitleElement    |
+  | ------ | ----------------- | ----- | ------------------- |
+  | SAMP   | HTMLElement       | TR    | HTMLTableRowElement |
+  | SCRIPT | HTMLScriptElement | TT    | HTMLElement         |
+  | SELECT | HTMLSelectElement | U     | HTMLElement         |
+  | SMALL  | HTMLElement       | UL    | HTMLUListElement    |
+  | SPAN   | HTMLElement       | VAR   | HTMLElement         |
+  | STRIKE | HTMLElement       |       |                     |
+
+#### 2. 取得特性
+
+- 操作特性的DOM方法主要有三个，分别是getAttribute()、setAttribute()和removeAttribute()。这三个方法可以针对任何特性使用，包括那些以HTMLElement类型属性的形式定义的特性。
+
+  - 注意，传递给getAttribute()的特性名与实际的特性名相同。因此要想得到class特性值，应该传入"class"而不是"className"，后者只有在通过对象属性访问特性时才用。如果给定名称的特性不存在，getAttribute()返回null。
+  - 通过getAttribute()方法也可以取得自定义特性（即标准HTML语言中没有的特性）的值。
+
+  > 特性的名称是不区分大小写的，即"ID"和"id"代表的都是同一个特性。另外也要注意，根据HTML5规范，自定义特性应该加上data-前缀以便验证。
+
+  - 只有公认的（非自定义的）特性才会以属性的形式添加到DOM对象中。（IE除外, 认为自定义特性也创建属性）
+
+  - 有两类特殊的特性，它们虽然有对应的属性名，但属性的值与通过getAttribute()返回的值并不相同。
+
+    - 第一类特性就是style，用于通过CSS为元素指定样式。在通过getAttribute()访问时，返回的style特性值中包含的是CSS文本，而通过属性来访问它则会返回一个对象。
+
+    > 由于style属性是用于以编程方式访问元素样式的，因此并没有直接映射到style特性。
+
+    - 第二类与众不同的特性是onclick这样的事件处理程序。当在元素上使用时，onclick特性中包含的是JavaScript 代码，如果通过getAttribute()访问，则会返回相应代码的字符串。而在访问onclick属性时，则会返回一个JavaScript函数（如果未在元素中指定相应特性，则返回null）。
+
+    > 这是因为onclick及其他事件处理程序属性本身就应该被赋予函数值。
+
+#### 3. 设置特性
+
+- setAttribute()
+  - 接受两个参数：要设置的特性名和值。
+    - 如果特性已经存在，setAttribute()会以指定的值替换现有的值；
+    - 如果特性不存在，setAttribute()则创建该属性并设置相应的值。
+  - 通过setAttribute()方法既可以操作HTML特性也可以操作自定义特性。
+  - 通过这个方法设置的特性名会被统一转换为小写形式。
+  - 因为所有特性都是属性，所以直接给属性赋值可以设置特性的值
+  - 为DOM元素添加一个自定义的属性，该属性不会自动成为元素的特性。可是，自定义属性在IE中会被当作元素的特性，反之亦然。
+  - 在IE7及以前版本中，setAttribute()存在一些异常行为。通过这个方法设置class和style特性，没有任何效果，而使用这个方法设置事件处理程序特性时也一样
+- removeAttribute()，这个方法用于彻底删除元素的特性。
+  - 调用这个方法不仅会清除特性的值，而且也会从元素中完全删除特性
+  - 这个方法并不常用，但在序列化DOM元素时，可以通过它来确切地指定要包含哪些特性。
+  - IE6及以前版本不支持removeAttribute()。
+
+#### 4. attributes属性
+
+- Element类型是使用attributes属性的唯一一个DOM节点类型。
+- attributes属性中包含一个NamedNodeMap，与NodeList类似，也是一个“动态”的集合。元素的每一个特性都由一个Attr节点表示，每个节点都保存在NamedNodeMap对象中。
+- NamedNodeMap对象拥有下列方法。
+  - getNamedItem(name)：返回nodeName属性等于name的节点；
+  - removeNamedItem(name)：从列表中移除nodeName属性等于name的节点；
+  - setNamedItem(node)：向列表中添加节点，以节点的nodeName属性为索引；
+  - item(pos)：返回位于数字pos位置处的节点。
+- attributes属性中包含一系列节点，每个节点的nodeName就是特性的名称，而节点的nodeValue就是特性的值。
+- 调用 removeNamedItem() 方法与在元素上调用 removeAttribute()方法的效果相同——直接删除具有给定名称的特性。两个方法间唯一的区别，即removeNamedItem()返回表示被删除特性的Attr节点。
+- setNamedItem()是一个很不常用的方法，通过这个方法可以为元素添加一个新特性，为此需要为它传入一个特性节点
+- 如果想要遍历元素的特性，attributes属性倒是可以派上用场。
+
+#### 5. 创建元素
+
+- document.createElement()方法可以创建新元素。
+  - 这个方法只接受一个参数，即要创建元素的标签名。这个标签名在HTML文档中不区分大小写，而在XML（包括XHTML）文档中，则是区分大小写的。
+- 在使用createElement()方法创建新元素的同时，也为新元素设置了ownerDocuemnt属性。
+- 在IE中可以以另一种方式使用createElement()，即为这个方法传入完整的元素标签，也可以包含属性。这种方式有助于避开在IE7及更早版本中动态创建元素的某些问题。下面是已知的一些这类问题。
+  - 不能设置动态创建的<iframe>元素的name特性。
+  - 不能通过表单的reset()方法重设动态创建的<input>元素。
+  - 动态创建的type特性值为"reset"的<buttou>元素重设不了表单。
+  - 动态创建的一批name相同的单选按钮彼此毫无关系。name值相同的一组单选按钮本来应该用于表示同一选项的不同值，但动态创建的一批这种单选按钮之间却没有这种关系。
+
+#### 6. 元素的子节点
+
+- 不同浏览器在看待这些节点方面存在显著的不同如果需要通过childNodes属性遍历子节点，那么一定不要忘记浏览器间的这一差别。这意味着在执行某项操作以前，通常都要先检查一下nodeTpye属性
+
+- 如果想通过某个特定的标签名取得子节点或后代节点该怎么办呢？实际上，元素也支持getElementsByTagName()方法。在通过元素调用这个方法时，除了搜索起点是当前元素之外，其他方面都跟通过document调用这个方法相同，因此结果只会返回当前元素的后代。
+
+  ```
+  var ul = document.getElementById("myList");
+  var items = ul.getElementsByTagName("li");
+  ```
+
+### 10.1.4 Text类型
+
+- 文本节点由Text类型表示，包含的是可以照字面解释的纯文本内容。纯文本中可以包含转义后的HTML字符，但不能包含HTML代码。
+- Text节点具有以下特征：
+  - nodeType的值为3；
+  - nodeName的值为"#text"；
+  - nodeValue的值为节点所包含的文本；
+  - parentNode是一个Element；
+  - 不支持（没有）子节点。
+- 可通过nodeValue属性或data属性访问Text节点中包含的文本，这两个属性中包含的值相同。对nodeValue的修改也会通过data反映出来，反之亦然。
+- 使用下列方法可以操作节点中的文本。
+  - appendData(text)：将text添加到节点的末尾。
+  - deleteData(offset, count)：从offset指定的位置开始删除count个字符。
+  - insertData(offset, text)：在offset指定的位置插入text。
+  - replaceData(offset, count, text)：用text替换从offset指定的位置开始到offset+count为止处的文本。
+  - splitText(offset)：从offset指定的位置将当前文本节点分成两个文本节点。
+  - substringData(offset, count)：提取从offset指定的位置开始到offset+count为止处的字符串。
+- 文本节点还有一个length 属性，保存着节点中字符的数目。
+- 在默认情况下，每个可以包含内容的元素最多只能有一个文本节点，而且必须确实有内容存在。
+
+#### 1. 创建文本节点
+
+- document.createTextNode()创建新文本节点
+  - 这个方法接受一个参数——要插入节点中的文本。
+  - 与设置已有文本节点的值一样，作为参数的文本也将按照HTML或XML的格式进行编码。
+  - 在创建新文本节点的同时，也会为其设置ownerDocument属性。
+  - 如果两个文本节点是相邻的同胞节点，那么这两个节点中的文本就会连起来显示，中间不会有空格。
+
+#### 2. 规范化文本节点
+
+- normalize()
+  - 在一个包含两个或多个文本节点的父元素上调用normalize()方法，则会将所有文本节点合并成一个节点，结果节点的nodeValue等于将合并前每个文本节点的nodeValue值拼接起来的值。
+  - 浏览器在解析文档时永远不会创建相邻的文本节点。这种情况只会作为执行DOM操作的结果出现。
+  - 在某些情况下，执行normalize()方法会导致IE6崩溃。
+
+#### 3. 分割文本节点
+
+- splitText()
+  - 这个方法会将一个文本节点分成两个文本节点，即按照指定的位置分割nodeValue值。原来的文本节点将包含从开始到指定位置之前的内容，新文本节点将包含剩下的文本。
+  - 这个方法会返回一个新文本节点，该节点与原节点的parentNode相同。
+- 分割文本节点是从文本节点中提取数据的一种常用DOM解析技术。
+
+### 10.1.5 Comment类型
+
+- 注释在DOM中是通过Comment类型来表示的。
+- Comment节点具有下列特征：
+  - nodeType的值为8；
+  - nodeName的值为"#comment"；
+  - nodeValue的值是注释的内容；
+  - parentNode可能是Document或Element；
+  - 不支持（没有）子节点。
+- Comment类型与Text类型继承自相同的基类，因此它拥有除splitText()之外的所有字符串操作方法。
+- 使用document.createComment()并为其传递注释文本也可以创建注释节点
+- 尽管IE9 没有把注释当成元素，但它仍然通过一个名为HTMLCommentElement的构造函数来表示注释。
+
+### 10.1.6 CDATASection类型
+
+- CDATASection 类型只针对基于XML的文档，表示的是CDATA区域。与Comment 类似，
+- CDATASection 类型继承自Text 类型，因此拥有除splitText()之外的所有字符串操作方法。
+- CDATASection节点具有下列特征：
+  - nodeType的值为4；
+  - nodeName的值为"#cdata-section"；
+  - nodeValue的值是CDATA区域中的内容；
+  - parentNode可能是Document或Element；
+  - 不支持（没有）子节点。
+- CDATA区域只会出现在XML文档中，因此多数浏览器都会把CDATA区域错误地解析为Comment或Element。
+- 在真正的XML文档中，可以使用document.createCDataSection()来创建CDATA区域，只需为其传入节点的内容即可。
+- 在Firefox、Safari、Chrome和Opera中，可以访问CDATASection类型的构造函数和原型。IE9及之前版本不支持这个类型。
+
+### 10.1.7 DocumentType类型
+
+- DocumentType类型在Web浏览器中并不常用，仅有Firefox、Safari和Opera支持它。
+- DocumentType包含着与文档的doctype有关的所有信息，它具有下列特征：
+  - nodeType的值为10；
+  - nodeName的值为doctype的名称；
+  - nodeValue的值为null；
+  - parentNode是Document；
+  - 不支持（没有）子节点。
+- 在DOM1级中，DocumentType对象不能动态创建，而只能通过解析文档代码的方式来创建。
+- 支持它的浏览器会把DocumentType 对象保存在document.doctype 中。
+- DOM1级描述了DocumentType对象的3个属性：name、entities和notations。
+  - name表示文档类型的名称；
+  - entities是由文档类型描述的实体的NamedNodeMap对象；
+  - notations是由文档类型描述的符号的NamedNodeMap对象。
+  - 通常，浏览器中的文档使用的都是HTML或XHTML文档类型，因而entities和notations都是空列表（列表中的项来自行内文档类型声明）。
+- IE9 会给document.doctype赋正确的对象，但仍然不支持访问DocumentType类型。
+
+### 10.1.8 DocumentFragment类型
+
+- 在所有节点类型中，只有DocumentFragment 在文档中没有对应的标记。
+- DOM规定文档片段（document fragment）是一种“轻量级”的文档，可以包含和控制节点，但不会像完整的文档那样占用额外的资源。
+- DocumentFragment节点具有下列特征：
+  - nodeType的值为11；
+  - nodeName的值为"#document-fragment"；
+  - nodeValue的值为null；
+  - parentNode的值为null；
+  - 子节点可以是Element、ProcessingInstruction、Comment、Text、CDATASection 或 EntityReference。
+- 虽然不能把文档片段直接添加到文档中，但可以将它作为一个“仓库”来使用，即可以在里面保存将来可能会添加到文档中的节点。如果逐个地添加列表项，将会导致浏览器反复渲染要创建文档片段，可以使用document.createDocumentFragment()方法
+- 文档片段继承了Node的所有方法，通常用于执行那些针对文档的DOM操作。
+- 如果将文档中的节点添加到文档片段中，就会从文档树中移除该节点，也不会从浏览器中再看到该节点。添加到文档片段中的新节点同样也不属于文档树。
+
+### 10.1.9 Attr类型
+
+- 元素的特性在DOM中以Attr类型来表示。在所有浏览器中（包括IE8），都可以访问Attr类型的构造函数和原型。从技术角度讲，特性就是存在于元素的attributes属性中的节点。
+- 特性节点具有下列特征：
+  - nodeType的值为2；
+  - nodeName的值是特性的名称；
+  - nodeValue的值是特性的值；
+  - parentNode的值为null；
+  - 在HTML中不支持（没有）子节点；
+  - 在XML中子节点可以是Text或EntityReference。
+- 尽管它们也是节点，但特性却不被认为是DOM文档树的一部分。开发人员最常使用的是getAttribute()、setAttribute()和remveAttribute()方法，很少直接引用特性节点。
+- Attr对象有3个属性：name、value和specified。
+  - name是特性名称（与nodeName的值相同）
+  - value是特性的值（与nodeValue的值相同）
+  - specified是一个布尔值，用以区别特性是在代码中指定的，还是默认的。
+- 使用document.createAttribute()并传入特性的名称可以创建新的特性节点。
+- 为了将新创建的特性添加到元素中，必须使用元素的setAttributeNode()方法。
+- 添加特性之后，可以通过下列任何方式访问该特性：attributes属性、getAttributeNode()方法以及getAttribute()方法。其中，attributes和getAttributeNode()都会返回对应特性的Attr节点，而getAttribute()则只返回特性的值。不建议直接访问特性节点。
+
+## 10.2 DOM操作技术
+
+### 10.2.1 动态脚本
+
+- 创建动态脚本也有两种方式：插入外部文件和直接插入JavaScript代码。
+- 动态加载的外部JavaScript文件能够立即运行；另一种指定JavaScript代码的方式是行内方式
+- IE 将<script>视为一个特殊的元素，不允许DOM访问其子节点。不过，可以使用<script>元素的text属性来指定JavaScript代码
+- 以这种方式加载的代码会在全局作用域中执行，而且当脚本执行后将立即可用。
+- 实际上，这样执行代码与在全局作用域中把相同的字符串传递给eval()是一样的。
+
+### 10.2.2 动态样式
+
+- 能够把CSS样式包含到HTML页面中的元素有两个。
+- <link>元素用于包含来自外部的文件，而<style>元素用于指定嵌入的样式。
+- 需要注意的是，必须将<link>元素添加到<head>而不是<body>元素，才能保证在所有浏览器中的行为一致。
+- 加载外部样式文件的过程是异步的，也就是加载样式与执行JavaScript代码的过程没有固定的次序。
+- 另一种定义样式的方式是使用<style>元素来包含嵌入式CSS，可以在Firefox、Safari、Chrome和Opera中运行，在IE中则会报错。
+
+> IE将<style>视为一个特殊的、与<script>类似的节点，不允许访问其子节点。事实上，IE此时抛出的错误与向<script>元素添加子节点时抛出的错误相同。
+
+- 解决IE中这个问题的办法，就是访问元素的styleSheet属性，该属性又有一个cssText属性，可以接受CSS代码
+
+> 如果专门针对IE编写代码，务必小心使用styleSheet.cssText属性。在重用同一个<style>元素并再次设置这个属性时，有可能会导致浏览器崩溃。同样，将cssText属性设置为空字符串也可能导致浏览器崩溃。
+
+### 10.2.3 操作表格
+
+- 为<table>元素添加的属性和方法如下。
+  - caption：保存着对<caption>元素（如果有）的指针。
+  - tBodies：是一个<tbody>元素的HTMLCollection。
+  - tFoot：保存着对<tfoot>元素（如果有）的指针。
+  - tHead：保存着对<thead>元素（如果有）的指针。
+  - rows：是一个表格中所有行的HTMLCollection。
+  - createTHead()：创建<thead>元素，将其放到表格中，返回引用。
+  - createTFoot()：创建<tfoot>元素，将其放到表格中，返回引用。
+  - createCaption()：创建<caption>元素，将其放到表格中，返回引用。
+  - deleteTHead()：删除<thead>元素。
+  - deleteTFoot()：删除<tfoot>元素。
+  - deleteCaption()：删除<caption>元素。
+  - deleteRow(pos)：删除指定位置的行。
+  - insertRow(pos)：向rows集合中的指定位置插入一行。
+- 为<tbody>元素添加的属性和方法如下。
+  - rows：保存着<tbody>元素中行的HTMLCollection。
+  - deleteRow(pos)：删除指定位置的行。
+  - insertRow(pos)：向rows集合中的指定位置插入一行，返回对新插入行的引用。
+- 为<tr>元素添加的属性和方法如下。
+  - cells：保存着<tr>元素中单元格的HTMLCollection。
+  - deleteCell(pos)：删除指定位置的单元格。
+  - insertCell(pos)：向cells集合中的指定位置插入一个单元格，返回对新插入单元格的引用。
+
+### 10.2.4使用NodeList
+
+- NodeList、NamedNodeMap和HTMLCollection，这三个集合都是“动态的”
+- 从本质上说，所有NodeList对象都是在访问DOM文档时实时运行的查询。
+- 如果想要迭代一个NodeList，最好是使用length属性初始化第二个变量，然后将迭代器与该变量进行比较
+- 一般来说，应该尽量减少访问NodeList的次数。因为每次访问NodeList，都会运行一次基于文档的查询。所以，可以考虑将从NodeList中取得的值缓存起来。
+
+## 10.3小结
+
+- DOM由各种节点构成，简要总结如下。
+  - 最基本的节点类型是Node，用于抽象地表示文档中一个独立的部分；所有其他类型都继承自Node
+  - Document类型表示整个文档，是一组分层节点的根节点。在JavaScript中，document对象是Document的一个实例。使用document对象，有很多种方式可以查询和取得节点。
+  - Element节点表示文档中的所有HTML或XML元素，可以用来操作这些元素的内容和特性。
+  - 另外还有一些节点类型，分别表示文本内容、注释、文档类型、CDATA区域和文档片段。
+- 访问DOM的操作在多数情况下都很直观，不过在处理<script>和<style>元素时还是存在一些复杂性。由于这两个元素分别包含脚本和样式信息，因此浏览器通常会将它们与其他元素区别对待。这些区别导致了在针对这些元素使用innerHTML时，以及在创建新元素时的一些问题。
+- 理解DOM的关键，就是理解DOM对性能的影响。DOM操作往往是JavaScript程序中开销最大的部分，而因访问NodeList导致的问题为最多。NodeList对象都是“动态的”，这就意味着每次访问NodeList对象，都会运行一次查询。有鉴于此，最好的办法就是尽量减少DOM操作。
 
 # 第15章 使用 Canvas 绘图
 
