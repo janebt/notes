@@ -412,7 +412,7 @@ PS：
 - 这4个操作符对任何值都适用，遵循下列规则
   -  在应用于一个包含有效数字字符的字符串时，先将其转换为数字值，再执行加减1的操作。字符串变量变成数值变量。
   -  在应用于一个不包含有效数字字符的字符串时，将变量的值设置为NaN
-              字符串变量变成数值变量。
+               字符串变量变成数值变量。
   -  在应用于布尔值false时，先将其转换为0再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于布尔值true时，先将其转换为1再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于浮点数值时，执行加减1的操作。
@@ -2242,6 +2242,290 @@ function isHostMethod(object, property) {
   - 另外还有一些节点类型，分别表示文本内容、注释、文档类型、CDATA区域和文档片段。
 - 访问DOM的操作在多数情况下都很直观，不过在处理<script>和<style>元素时还是存在一些复杂性。由于这两个元素分别包含脚本和样式信息，因此浏览器通常会将它们与其他元素区别对待。这些区别导致了在针对这些元素使用innerHTML时，以及在创建新元素时的一些问题。
 - 理解DOM的关键，就是理解DOM对性能的影响。DOM操作往往是JavaScript程序中开销最大的部分，而因访问NodeList导致的问题为最多。NodeList对象都是“动态的”，这就意味着每次访问NodeList对象，都会运行一次查询。有鉴于此，最好的办法就是尽量减少DOM操作。
+
+# 第11章 DOM 扩展
+
+- 对DOM的两个主要的扩展是Selectors API（选择符API）和HTML5
+- 还有一个不那么引人瞩目的Element Traversal（元素遍历）规范，为DOM添加了一些属性。
+
+## 11.1 选择符API
+
+- Selectors API 是由W3C发起制定的一个标准，致力于让浏览器原生支持CSS查询。
+- Selectors API Level 1的核心是两个方法：querySelector()和querySelectorAll()。
+- 目前已完全支持Selectors API Level 1的浏览器有IE 8+、Firefox 3.5+、Safari 3.1+、Chrome和Opera 10+。
+
+### 11.1.1 querySelector()方法
+
+- querySelector()方法接收一个CSS选择符，返回与该模式匹配的第一个元素，如果没有找到匹配的元素，返回null。
+
+### 11.1.2 querySelectorAll()方法
+
+- 这个方法返回的是一个NodeList的实例。
+- 具体来说，返回的值实际上是带有所有属性和方法的NodeList，而其底层实现则类似于一组元素的快照，而非不断对文档进行搜索的动态查询。
+- 只要传给querySelectorAll()方法的CSS选择符有效，该方法都会返回一个NodeList对象，而不管找到多少匹配的元素。
+
+### 11.1.3 matchesSelector()方法
+
+- matchesSelector()方法
+  - 接收一个参数，即CSS选择符
+  - 如果调用元素与该选择符匹配，返回true；否则，返回false。
+- 浏览器支持性不确定，因此，如果你想使用这个方法，最好是编写一个包装函数。
+
+## 11.2 元素遍历
+
+- 对于元素间的空格，IE9及之前版本不会返回文本节点，而其他所有浏览器都会返回文本节点。
+- Element Traversal API为DOM元素添加了以下5个属性。
+  - childElementCount：返回子元素（不包括文本节点和注释）的个数。
+  - firstElementChild：指向第一个子元素；firstChild的元素版。
+  - lastElementChild：指向最后一个子元素；lastChild的元素版。
+  - previousElementSibling：指向前一个同辈元素；previousSibling的元素版。
+  - nextElementSibling：指向后一个同辈元素；nextSibling的元素版。
+- 支持的浏览器为DOM元素添加了这些属性，利用这些元素不必担心空白文本节点，从而可以更方便地查找DOM元素了。
+- 支持Element Traversal规范的浏览器有IE 9+、Firefox 3.5+、Safari 4+、Chrome和Opera 10+。
+
+## 11.3  HTML5
+
+### 11.3.1 与类相关的扩充
+
+#### 1. getElementsByClassName()方法
+
+- 可通过document对象及所有HTML元素调用该方法。这个方法是通过既有的DOM功能实现的，而原生的实现具有极大的性能优势。
+
+
+- 指定类的所有元素的NodeList。传入多个类名时，类名的先后顺序不重要。
+- 调用这个方法时，只有位于调用元素子树中的元素才会返回。在document 对象上调用getElementsByClassName()始终会返回与类名匹配的所有元素，在元素上调用该方法就只会返回后代元素中匹配的元素。
+- 支持getElementsByClassName()方法的浏览器有IE 9+、Firefox 3+、Safari 3.1+、Chrome和Opera 9.5+。
+
+#### 2. classList属性
+
+- 在操作类名时，需要通过className属性添加、删除和替换类名。因为className中是一个字符串，所以即使只修改字符串一部分，也必须每次都设置整个字符串的值。
+- HTML5新增了一种操作类名的方式，可以让操作更简单也更安全，那就是为所有元素添加classList属性。这个classList属性是新集合类型DOMTokenList的实例。与其他DOM集合类似，DOMTokenList有一个表示自己包含多少元素的length属性，而要取得每个元素可以使用item()方法，也可以使用方括号语法。
+- 这个新类型还定义如下方法。
+  - add(value)：将给定的字符串值添加到列表中。如果值已经存在，就不添加了。
+  - contains(value)：表示列表中是否存在给定的值，如果存在则返回true，否则返回false。
+  - remove(value)：从列表中删除给定的字符串。
+  - toggle(value)：如果列表中已经存在给定的值，删除它；如果列表中没有给定的值，添加它。
+- 有了classList属性，除非你需要全部删除所有类名，或者完全重写元素的class属性，否则也就用不到className属性了。
+- 支持classList属性的浏览器有Firefox 3.6+和Chrome。
+
+### 11.3.2 焦点管理
+
+- HTML5也添加了辅助管理DOM焦点的功能。
+- 首先就是document.activeElement属性，这个属性始终会引用DOM中当前获得了焦点的元素。元素获得焦点的方式有页面加载、用户输入（通常是通过按Tab键）和在代码中调用focus()方法。
+  - 默认情况下，文档刚刚加载完成时，document.activeElement中保存的是document.body元素的引用。文档加载期间，document.activeElement的值为null。
+- 另外就是新增了document.hasFocus()方法，这个方法用于确定文档是否获得了焦点。
+- 查询文档获知哪个元素获得了焦点，以及确定文档是否获得了焦点，这两个功能最重要的用途是提高Web应用的无障碍性。无障碍Web应用的一个主要标志就是恰当的焦点管理
+- 实现了这两个属性的浏览器的包括IE 4+、Firefox 3+、Safari 4+、Chrome和Opera 8+。
+
+### 11.3.3 HTMLDocument的变化
+
+#### 1. readyState属性
+
+- IE4最早为document对象引入了readyState属性。然后，其他浏览器也都陆续添加这个属性，最终HTML5把这个属性纳入了标准当中。
+
+- Document的readyState属性有两个可能的值：
+
+  - loading，正在加载文档；
+  - complete，已经加载完文档。
+
+- 使用document.readyState的最恰当方式，就是通过它来实现一个指示文档已经加载完成的指示器。
+
+- document.readyState属性的基本用法如下。
+
+  ```
+  if (document.readyState == "complete"){
+  	//执行操作
+  }
+  ```
+
+- 支持readyState属性的浏览器有IE4+、Firefox 3.6+、Safari、Chrome和Opera 9+。
+
+#### 2. 兼容模式
+
+- IE为此给document添加了一个名为compatMode的属性，这个属性就是为了告诉开发人员浏览器采用了哪种渲染模式。
+- 在标准模式下，document.compatMode的值等于"CSS1Compat"，而在混杂模式下，document.compatMode的值等于"BackCompat"。
+
+#### 3. head属性
+
+- HTML5新增了document.head属性，引用文档的<head>元素。要引用文档的<head>元素，可以结合使用这个属性和另一种后备方法。
+
+  ```
+  var head = document.head || document.getElementsByTagName("head")[0];
+  ```
+
+- 实现document.head属性的浏览器包括Chrome和Safari 5。
+
+### 11.3.4 字符集属性
+
+- charset属性表示文档中实际使用的字符集，也可以用来指定新字符集。
+- 默认情况下，这个属性的值为"UTF-16"，但可以通过<meta>元素、响应头部或直接设置charset属性修改这个值。
+- 另一个属性是defaultCharset，表示根据默认浏览器及操作系统的设置，当前文档默认的字符集应该是什么。
+- 支持document.charset 属性的浏览器有IE、Firefox、Safari、Opera和Chrome。
+- 支持document.defaultCharset属性的浏览器有IE、Safari和Chrome。
+
+### 11.3.5 自定义数据属性
+
+- HTML5规定可以为元素添加非标准的属性，但要添加前缀data-，目的是为元素提供与渲染无关的信息，或者提供语义信息。这些属性可以任意添加、随便命名，只要以data-开头即可。
+- 添加了自定义属性之后，可以通过元素的dataset属性来访问自定义属性的值。
+- dataset属性的值是DOMStringMap的一个实例，也就是一个名值对儿的映射。在这个映射中，每个data-name形式的属性都会有一个对应的属性，只不过属性名没有data-前缀
+- 如果需要给元素添加一些不可见的数据以便进行其他处理，那就要用到自定义数据属性。在跟踪链接或混搭应用中，通过自定义数据属性能方便地知道点击来自页面中的哪个部分。
+
+### 11.3.6 插入标记
+
+- 使用插入标记的技术，直接插入HTML字符串不仅更简单，速度也更快。
+- 以下与插入标记相关的DOM扩展已经纳入了HTML5规范。
+
+#### 1. innerHTML属性
+
+- 在读模式下，innerHTML属性返回与调用元素的所有子节点（包括元素、注释和文本节点）对应的HTML标记。
+  - 不同浏览器返回的文本格式会有所不同。IE和Opera会将所有标签转换为大写形式，而Safari、Chrome和Firefox则会原原本本地按照原先文档中（或指定这些标签时）的格式返回HTML，包括空格和缩进。
+- 在写模式下，innerHTML会根据指定的值创建新的DOM树，然后用这个DOM树完全替换调用元素原先的所有子节点。
+- 使用innerHTML属性也有一些限制。
+
+> 比如，在大多数浏览器中，通过innerHTML插入<script>元素并不会执行其中的脚本。IE8及更早版本是唯一能在这种情况下执行脚本的浏览器，但必须满足一些条件。一是必须为<script>元素指定defer属性，二是<script>元素必须位于（微软所谓的）“有作用域的元素”（scoped element）之后 。<script>元素被认为是“无作用域的元素”（NoScope element），也就是在页面中看不到的元素，与<style>元素或注释类似。如果通过innerHTML插入的字符串开头就是一个“无作用域的元素”，那么IE会在解析这个字符串前先删除该元素。（可以插入隐藏的<input>域，不影响页面布局）
+
+- 大多数浏览器都支持以直观的方式通过innerHTML插入<style>元素，但在IE8 及更早版本中，<style>也是一个“没有作用域的元素”
+- 不支持innerHTML的元素有：<col>、<colgroup>、<frameset>、<head>、<html>、<style>、<table>、<tbody>、<thead>、<tfoot>和<tr>。
+- 此外，在IE8及更早版本中，<title>元素也没有innerHTML属性。
+- Firefox对在内容类型为application/xhtml+xml的XHTML文档中设置innerHTML有严格的限制。在XHTML文档中使用innerHTML时，XHTML代码必须完全符合要求。如果代码格式不正确，设置innerHTML将会静默地失败。
+- 无论什么时候，只要使用innerHTML从外部插入HTML，都应该首先以可靠的方式处理HTML。IE8为此提供了window.toStaticHTML()方法，这个方法接收一个参数，即一个HTML字符串；返回一个经过无害处理后的版本——从源HTML中删除所有脚本节点和事件处理程序属性。
+
+#### 2. outerHTML属性
+
+- 在读模式下，outerHTML返回调用它的元素及所有子节点的HTML标签。
+- 在写模式下，outerHTML会根据指定的HTML字符串创建新的DOM子树，然后用这个DOM子树完全替换调用元素。
+- 支持outerHTML属性的浏览器有IE4+、Safari 4+、Chrome和Opera 8+。Firefox 7及之前版本都不支持outerHTML属性。
+
+#### 3. insertAdjacentHTML()方法
+
+- 插入标记的最后一个新增方式是insertAdjacentHTML()方法。这个方法最早也是在IE中出现的，
+- 它接收两个参数：插入位置和要插入的HTML文本。
+  - 第一个参数必须是下列值之一：
+    - "beforebegin"，在当前元素之前插入一个紧邻的同辈元素；
+    - "afterbegin"，在当前元素之下插入一个新的子元素或在第一个子元素之前再插入新的子元素；
+    - "beforeend"，在当前元素之下插入一个新的子元素或在最后一个子元素之后再插入新的子元素；
+    - "afterend"，在当前元素之后插入一个紧邻的同辈元素。
+    - 注意，这些值都必须是小写形式。
+  - 第二个参数是一个HTML字符串（与innerHTML和outerHTML的值相同），如果浏览器无法解析该字符串，就会抛出错误。
+- 支持insertAdjacentHTML()方法的浏览器有IE、Firefox 8+、Safari、Opera和Chrome。
+
+#### 4. 内存与性能问题
+
+- 使用本节介绍的方法替换子节点可能会导致浏览器的内存占用问题，尤其是在IE 中，问题更加明显。
+- 在删除带有事件处理程序或引用了其他JavaScript对象子树时，就有可能导致内存占用问题。
+
+> 在插入大量新HTML标记时，使用innerHTML属性与通过多次DOM操作先创建节点再指定它们之间的关系相比，效率要高得多。这是因为在设置innerHTML或outerHTML时，就会创建一个HTML解析器。这个解析器是在浏览器级别的代码（通常是C++编写的）基础上运行的，因此比执行JavaScript快得多。不可避免地，创建和销毁HTML解析器也会带来性能损失，所以最好能够将设置innerHTML或outerHTML的次数控制在合理的范围内。
+
+### 11.3.7 scrollIntoView()方法
+
+- HTML5最终选择了scrollIntoView()作为标准方法。
+- scrollIntoView()可以在所有HTML元素上调用，通过滚动浏览器窗口或某个容器元素，调用元素就可以出现在视口中。
+- 如果给这个方法传入true作为参数，或者不传入任何参数，那么窗口滚动之后会让调用元素的顶部与视口顶部尽可能平齐。如果传入false作为参数，调用元素会尽可能全部出现在视口中（可能的话，调用元素的底部会与视口顶部平齐。）
+- 实际上，为某个元素设置焦点也会导致浏览器滚动并显示出获得焦点的元素。
+- 支持scrollIntoView()方法的浏览器有IE、Firefox、Safari和Opera。
+
+## 11.4 专有扩展
+
+### 11.4.1 文档模式
+
+- IE8引入了一个新的概念叫“文档模式”。页面的文档模式决定了可以使用什么功能。到了IE9，总共有以下4种文档模式。
+
+  - IE5：以混杂模式渲染页面（IE5的默认模式就是混杂模式）。IE8及更高版本中的新功能都无法使用。
+  - IE7：以IE7标准模式渲染页面。IE8及更高版本中的新功能都无法使用。
+  - IE8：以IE8标准模式渲染页面。IE8中的新功能都可以使用，因此可以使用Selectors API、更多CSS2级选择符和某些CSS3功能，还有一些HTML5的功能。不过IE9中的新功能无法使用。
+  - IE9：以IE9标准模式渲染页面。IE9中的新功能都可以使用，比如ECMAScript 5、完整的CSS3以及更多HTML5功能。这个文档模式是最高级的模式。
+
+- 要强制浏览器以某种模式渲染页面，可以使用HTTP头部信息X-UA-Compatible，或通过等价的<meta>标签来设置：
+
+  ```
+  <meta http-equiv="X-UA-Compatible" content="IE=IEVersion"> 
+  ```
+
+  注意，这里IE的版本（IEVersion）有以下一些不同的值，而且这些值并不一定与上述4种文档
+  模式对应。
+
+  - Edge：始终以最新的文档模式来渲染页面。忽略文档类型声明。对于IE8，始终保持以IE8标准模式渲染页面。对于IE9，则以IE9标准模式渲染页面。
+  - EmulateIE9：如果有文档类型声明，则以IE9标准模式渲染页面，否则将文档模式设置为IE5。
+  - EmulateIE8：如果有文档类型声明，则以IE8标准模式渲染页面，否则将文档模式设置为IE5。
+  - EmulateIE7：如果有文档类型声明，则以IE7标准模式渲染页面，否则将文档模式设置为IE5。
+  - 9：强制以IE9标准模式渲染页面，忽略文档类型声明。
+  - 8：强制以IE8标准模式渲染页面，忽略文档类型声明。
+  - 7：强制以IE7标准模式渲染页面，忽略文档类型声明。
+  - 5：强制将文档模式设置为IE5，忽略文档类型声明。
+
+- 通过document.documentMode属性可以知道给定页面使用的是什么文档模式。这个属性是IE8中新增的，它会返回使用的文档模式的版本号（在IE9中，可能返回的版本号为5、7、8、9）
+
+### 11.4.2 children属性
+
+- children属性是HTMLCollection 的实例，只包含元素中同样还是元素的子节点。除此之外，children属性与childNodes没有什么区别，即在元素只包含元素子节点时，这两个属性的值相同。
+- 支持children属性的浏览器有IE5、Firefox 3.5、Safari 2（但有bug）、Safari 3（完全支持）、Opera8和Chrome（所有版本）。IE8及更早版本的children属性中也会包含注释节点，但IE9之后的版本则只返回元素节点。
+
+### 11.4.3 contains()方法
+
+- 调用contains()方法的应该是祖先节点，也就是搜索开始的节点，这个方法接收一个参数，即要检测的后代节点。如果被检测的节点是后代节点，该方法返回true；否则，返回false。
+
+- 支持contains()方法的浏览器有IE、Firefox 9+、Safari、Opera和Chrome。
+
+- 使用DOM Level 3compareDocumentPosition()也能够确定节点间的关系。支持这个方法的浏览器有IE9+、Firefox、Safari、Opera 9.5+和Chrome。这个方法用于确定两个节点间的关系，返回一个表示该关系的位掩码（bitmask）。
+
+  | 掩码   | 节点关系                    |
+  | ---- | ----------------------- |
+  | 1    | 无关（给定的节点不在当前文档中）        |
+  | 2    | 居前（给定的节点在DOM树中位于参考节点之前） |
+  | 4    | 居后（给定的节点在DOM树中位于参考节点之后） |
+  | 8    | 包含（给定的节点是参考节点的祖先）       |
+  | 16   | 被包含（给定的节点是参考节点的后代）      |
+
+- 为模仿contains()方法，应该关注的是掩码16。可以对compareDocumentPosition()的结果执行按位与，以确定参考节点（调用compareDocumentPosition()方法的当前节点）是否包含给定的节点（传入的节点）。
+
+### 11.4.4 插入文本
+
+- innerText和outerText没有被HTML5纳入规范。
+
+#### 1. innerText属性
+
+- 通过innertText 属性可以操作元素中包含的所有文本内容，包括子文档树中的文本。
+
+- 在通过innerText 读取值时，它会按照由浅入深的顺序，将子文档树中的所有文本拼接起来。
+
+- 在通过innerText写入值时，结果会删除元素的所有子节点，插入包含相应文本值的文本节点。
+
+- 由于不同浏览器处理空白符的方式不同，因此输出的文本可能会也可能不会包含原始HTML代码中的缩进。
+
+- 设置innerText属性移除了先前存在的所有子节点，完全改变了DOM子树。此外，设置innerText属性的同时，也对文本中存在的HTML语法字符（小于号、大于号、引号及和号）进行了编码。
+
+- 设置innerText永远只会生成当前节点的一个子文本节点，而为了确保只生成一个子文本节点，就必须要对文本进行HTML编码。利用这一点，可以通过innerText属性过滤掉HTML标签。方法是将innerText设置为等于innerText，这样就可以去掉所有HTML标签，比如：
+
+  ```
+  div.innerText = div.innerText;
+  ```
+
+- 支持innerText 属性的浏览器包括IE4+、Safari 3+、Opera 8+和Chrome。Firefox虽然不支持innerText，但支持作用类似的textContent属性。
+
+- textContent是DOM Level 3规定的一个属性，其他支持textContent属性的浏览器还有IE9+、Safari 3+、Opera 10+和Chrome。
+
+- innerText 与textContent 返回的内容并不完全一样。
+
+  - innerText会忽略行内的样式和脚本，而textContent则会像返回其他文本一样返回行内的样式和脚本代码。避免跨浏览器兼容问题的最佳途径，就是从不包含行内样式或行内脚本的DOM子树副本或DOM片段中读取文本。
+
+#### 2. outerText属性
+
+- 在读取文本值时，outerText与innerText的结果完全一样。
+- 但在写模式下，outerText就完全不同了：outerText不只是替换调用它的元素的子节点，而是会替换整个元素（包括子节点）。
+- 支持outerText属性的浏览器有IE4+、Safari 3+、Opera 8+和Chrome。由于这个属性会导致调用它的元素不存在，因此并不常用。
+
+### 11.4.5 滚动
+
+- scrollIntoViewIfNeeded(alignCenter)：只在当前元素在视口中不可见的情况下，才滚动浏览器窗口或容器元素，最终让它可见。如果当前元素在视口中可见，这个方法什么也不做。如果将可选的alignCenter参数设置为true，则表示尽量将元素显示在视口中部（垂直方向）。Safari和Chrome实现了这个方法。
+- scrollByLines(lineCount)：将元素的内容滚动指定的行高，lineCount值可以是正值，也可以是负值。Safari和Chrome实现了这个方法。
+- scrollByPages(pageCount)：将元素的内容滚动指定的页面高度，具体高度由元素的高度决定。Safari和Chrome实现了这个方法。
+- 注意，scrollIntoView()和scrollIntoViewIfNeeded()的作用对象是元素的容器，而scrollByLines()和scrollByPages()影响的则是元素自身。
+
+## 11.5小结
+
+- Selectors API，定义了两个方法，让开发人员能够基于CSS选择符从DOM中取得元素，这两个方法是querySelector()和querySelectorAll()。
+- Element Traversal，为DOM元素定义了额外的属性，让开发人员能够更方便地从一个元素跳到另一个元素。之所以会出现这个扩展，是因为浏览器处理DOM元素间空白符的方式不一样。
+- HTML5，为标准的DOM定义了很多扩展功能。其中包括在innerHTML属性这样的事实标准基础上提供的标准定义，以及为管理焦点、设置字符集、滚动页面而规定的扩展API。
 
 # 第15章 使用 Canvas 绘图
 
