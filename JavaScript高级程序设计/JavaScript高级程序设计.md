@@ -412,7 +412,7 @@ PS：
 - 这4个操作符对任何值都适用，遵循下列规则
   -  在应用于一个包含有效数字字符的字符串时，先将其转换为数字值，再执行加减1的操作。字符串变量变成数值变量。
   -  在应用于一个不包含有效数字字符的字符串时，将变量的值设置为NaN
-               字符串变量变成数值变量。
+                字符串变量变成数值变量。
   -  在应用于布尔值false时，先将其转换为0再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于布尔值true时，先将其转换为1再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于浮点数值时，执行加减1的操作。
@@ -2526,6 +2526,643 @@ function isHostMethod(object, property) {
 - Selectors API，定义了两个方法，让开发人员能够基于CSS选择符从DOM中取得元素，这两个方法是querySelector()和querySelectorAll()。
 - Element Traversal，为DOM元素定义了额外的属性，让开发人员能够更方便地从一个元素跳到另一个元素。之所以会出现这个扩展，是因为浏览器处理DOM元素间空白符的方式不一样。
 - HTML5，为标准的DOM定义了很多扩展功能。其中包括在innerHTML属性这样的事实标准基础上提供的标准定义，以及为管理焦点、设置字符集、滚动页面而规定的扩展API。
+
+
+
+# 第12章 DOM2和DOM3
+
+## 12.1 DOM变化
+
+### 12.1.1 针对XML命名空间的变化
+
+- 从技术上说，HTML不支持XML命名空间，但XHTML支持XML命名空间。
+- 命名空间要使用xmlns特性来指定。XHTML的命名空间是`http://www.w3.org/1999/xhtml`，在任何格式良好XHTML页面中，都应该将其包含在<html>元素中
+- 要想明确地为XML命名空间创建前缀，可以使用xmlns后跟冒号，再后跟前缀
+
+#### 1. Node类型的变化
+
+在DOM2级中，Node类型包含下列特定于命名空间的属性。
+
+- localName：不带命名空间前缀的节点名称。
+- namespaceURI：命名空间URI或者（在未指定的情况下是）null。
+- prefix：命名空间前缀或者（在未指定的情况下是）null。
+
+DOM3级在此基础上更进一步，又引入了下列与命名空间有关的方法
+
+- isDefaultNamespace(namespaceURI)：在指定的namespaceURI是当前节点的默认命名空间的情况下返回true。
+- lookupNamespaceURI(prefix)：返回给定prefix的命名空间。
+- lookupPrefix(namespaceURI)：返回给定namespaceURI的前缀。
+
+#### 2. Document类型的变化
+
+DOM2级中的Document类型也发生了变化，包含了下列与命名空间有关的方法。
+
+- createElementNS(namespaceURI, tagName)：使用给定的tagName创建一个属于命名空间namespaceURI的新元素。
+- createAttributeNS(namespaceURI, attributeName)：使用给定的attributeName创建一个属于命名空间namespaceURI的新特性。
+- getElementsByTagNameNS(namespaceURI, tagName)：返回属于命名空间namespaceURI的tagName元素的NodeList。
+
+#### 3. Element类型的变化
+
+“DOM2级核心”新增的方法如下。
+
+- getAttributeNS(namespaceURI,localName)：取得属于命名空间namespaceURI且名为localName的特性。
+- getAttributeNodeNS(namespaceURI,localName)：取得属于命名空间namespaceURI且名为localName的特性节点。
+- getElementsByTagNameNS(namespaceURI, tagName)：返回属于命名空间namespaceURI的tagName元素的NodeList。
+- hasAttributeNS(namespaceURI,localName)：确定当前元素是否有一个名为localName的特性，而且该特性的命名空间是namespaceURI。注意，“DOM2级核心”也增加了一个hasAttribute()方法，用于不考虑命名空间的情况。
+- removeAttriubteNS(namespaceURI,localName)：删除属于命名空间namespaceURI且名为localName的特性。
+- setAttributeNS(namespaceURI,qualifiedName,value)：设置属于命名空间namespaceURI且名为qualifiedName的特性的值为value。
+- setAttributeNodeNS(attNode)：设置属于命名空间namespaceURI的特性节点。
+
+#### 4. NamedNodeMap类型的变化
+
+由于特性是通过NamedNodeMap表示的，因此这些方法多数情况下只针对特性使用。
+
+- getNamedItemNS(namespaceURI,localName)：取得属于命名空间namespaceURI 且名为localName的项。
+- removeNamedItemNS(namespaceURI,localName)：移除属于命名空间namespaceURI且名为localName的项。
+- setNamedItemNS(node)：添加node，这个节点已经事先指定了命名空间信息。
+
+由于一般都是通过元素访问特性，所以这些方法很少使用。
+
+
+
+### 12.1.2 其他方面的变化
+
+#### 1. DocumentType类型的变化
+
+DocumentType类型新增了3个属性：publicId、systemId和internalSubset。其中，前两个属性表示的是文档类型声明中的两个信息段，这两个信息段在DOM1级中是没有办法访问到的。最后一个属性internalSubset，用于访问包含在文档类型声明中的额外定义
+
+#### 2. Document类型的变化
+
+Document类型的变化中唯一与命名空间无关的方法是importNode()。
+
+- 这个方法的用途是从一个文档中取得一个节点，然后将其导入到另一个文档，使其成为这个文档结构的一部分。
+- 需要注意的是，每个节点都有一个ownerDocument属性，表示所属的文档。如果调用appendChild()时传入的节点属于不同的文档（ownerDocument属性的值不一样），则会导致错误。但在调用importNode()时传入不同文档的节点则会返回一个新节点，这个新节点的所有权归当前文档所有。
+- 接受两个参数：要复制的节点和一个表示是否复制子节点的布尔值。返回的结果是原来节点的副本，但能够在当前文档中使用。
+- 这个方法在HTML文档中并不常用，在XML文档中用得比较多。
+
+“DOM2级视图”模块添加了一个名为defaultView的属性，其中保存着一个指针，指向拥有给定文档的窗口（或框架）。
+
+除IE之外的所有浏览器都支持defaultView属性。在IE中有一个等价的属性名叫parentWindow（Opera也支持这个属性）。
+
+“DOM2级核心”还为document.implementation对象规定了两个新方法：createDocumentType()和createDocument()。前者用于创建一个新的DocumentType节点，接受3个参数：文档类型名称、publicId、systemId。
+
+创建新文档时需要用到createDocument()方法。这个方法接受3个参数：针对文档中元素的namespaceURI、文档元素的标签名、新文档的文档类型。
+
+```javascript
+e.g.	创建XHTML文档
+var doctype = document.implementation.createDocumentType("html",
+" -//W3C//DTD XHTML 1.0 Strict//EN","http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd");
+var doc = document.implementation.createDocument("http://www.w3.org/1999/xhtml",
+"html", doctype);
+```
+
+“DOM2级HTML”模块也为document.implementation新增了一个方法，名叫createHTMLDocument()。这个方法的用途是创建一个完整的HTML文档，包括<html>、<head>、<title>和<body>元素。这个方法只接受一个参数，即新创建文档的标题（放在<title>元素中的字符串），返回新的HTML文档
+
+只有Opera和Safari支持这个方法。
+
+#### 3. Node类型的变化
+
+isSupported()方法。
+
+- isSupported()方法用于确定当前节点具有什么能力。
+- 接受相同的两个参数：特性名和特性版本号。
+- 如果浏览器实现了相应特性，而且能够基于给定节点执行该特性，isSupported()就返回true。
+- 这个方法同样也存在与DOM1的hasFeature()方法相同的问题。为此，我们建议在确定某个特性是否可用时，最好还是使用能力检测。
+
+DOM3级引入了两个辅助比较节点的方法：isSameNode()和isEqualNode()。
+
+- 这两个方法都接受一个节点参数，并在传入节点与引用的节点相同或相等时返回true。所谓相同，指的是两个节点引用的是同一个对象。所谓相等，指的是两个节点是相同的类型，具有相等的属性（nodeName、nodeValue，等等），而且它们的attributes和childNodes属性也相等（相同位置包含相同的值）。
+
+DOM3级针对为DOM节点添加额外数据引入了新方法
+
+- setUserData()方法
+  - 将数据指定给节点
+  - 接受3个参数：要设置的键、实际的数据（可以是任何数据类型）和处理函数。
+    - 传入setUserData()中的处理函数会在带有数据的节点被复制、删除、重命名或引入一个文档时调用，因而你可以事先决定在上述操作发生时如何处理用户数据。
+    - 处理函数接受5个参数：表示操作类型的数值（1表示复制，2表示导入，3表示删除，4表示重命名）、数据键、数据值、源节点和目标节点。在删除节点时，源节点是null；除在复制节点时，目标节点均为null。
+
+#### 4. 框架的变化
+
+框架和内嵌框架分别用HTMLFrameElement和HTMLIFrameElement表示，它们在DOM2级中都有了一个新属性，名叫contentDocument。
+
+这个属性包含一个指针，指向表示框架内容的文档对象。在此之前，无法直接通过元素取得这个文档对象（只能使用frames集合）。
+
+contentDocument属性是Document类型的实例，Opera、Firefox、Safari和Chrome支持这个属性。IE8之前不支持框架中的contentDocument属性，但支持一个名叫contentWindow的属性，该属性返回框架的window对象，而这个window对象又有一个document属性。
+
+```javascript
+要想在上述所有浏览器中访问内嵌框架的文档对象，可以使用下列代码。
+var iframe = document.getElementById("myIframe");
+var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+```
+
+所有浏览器都支持contentWindow属性。
+
+> 访问框架或内嵌框架的文档对象要受到跨域安全策略的限制。如果某个框架中的页面来自其他域或不同子域，或者使用了不同的协议，那么要访问这个框架的文档对象就会导致错误。
+
+
+
+## 12.2 样式
+
+要确定浏览器是否支持DOM2级定义的CSS能力，可以使用下列代码。
+
+```javascript
+var supportsDOM2CSS = document.implementation.hasFeature("CSS", "2.0"); 
+var supportsDOM2CSS2 = document.implementation.hasFeature("CSS2", "2.0"); 
+```
+
+### 12.2.1 访问元素的样式
+
+对于使用短划线（分隔不同的词汇，例如background-image）的CSS属性名，必须将其转换成驼峰大小写形式，才能通过JavaScript来访问。
+
+多数情况下，都可以通过简单地转换属性名的格式来实现转换。其中一个不能直接转换的CSS属性就是float。由于float是JavaScript中的保留字，因此不能用作属性名。“DOM2级样式”规范规定样式对象上相应的属性名应该是cssFloat；Firefox、Safari、Opera和Chrome都支持这个属性，而IE支持的则是styleFloat。
+
+> 在标准模式下，所有度量值都必须指定一个度量单位。在混杂模式下，可以将style.width 设置为"20"，浏览器会假设它是"20px"；但在标准模式下，将style.width设置为"20"会导致被忽略——因为没有度量单位。
+
+#### 1. DOM样式属性和方法
+
+“DOM2级样式”规范还为style对象定义了一些属性和方法。
+
+- cssText：如前所述，通过它能够访问到style特性中的CSS代码。
+- length：应用给元素的CSS属性的数量。
+- parentRule：表示CSS信息的CSSRule对象。
+- getPropertyCSSValue(propertyName)：返回包含给定属性值的CSSValue对象。
+- getPropertyPriority(propertyName)：如果给定的属性使用了!important设置，则返回"important"；否则，返回空字符串。
+- getPropertyValue(propertyName)：返回给定属性的字符串值。
+- item(index)：返回给定位置的CSS属性的名称。
+- removeProperty(propertyName)：从样式中删除给定属性。
+- setProperty(propertyName,value,priority)：将给定属性设置为相应的值，并加上优先权标志（"important"或者一个空字符串）。
+
+设计length属性的目的，就是将其与item()方法配套使用，以便迭代在元素中定义的CSS属性。在使用length和item()时，style对象实际上就相当于一个集合，都可以使用方括号语法来代替item()来取得给定位置的CSS属性
+
+使用removeProperty()方法移除一个属性，意味着将会为该属性应用默认的样式（从其他样式,,表经层叠而来）。
+
+#### 2. 计算的样式
+
+##### getComputedStyle()
+
+“DOM2级样式”增强了document.defaultView，提供了getComputedStyle()方法。
+
+这个方法接受两个参数：要取得计算样式的元素和一个伪元素字符串（例如":after"）。如果不需要伪元素信息，第二个参数可以是null。
+
+getComputedStyle()方法返回一个CSSStyleDeclaration对象（与style属性的类型相同），其中包含当前元素的所有计算的样式。
+
+> ```javascript
+> <div id="myDiv" style="background-color: red; border: 1px solid black"></div>
+> ```
+>
+> style里面同名的属性会覆盖myDiv中的同名属性
+
+边框属性可能会也可能不会返回样式表中实际的border规则
+
+##### currentStyle
+
+IE不支持getComputedStyle()方法，但它有一种类似的概念。在IE中，每个具有style属性的元素还有一个currentStyle属性。这个属性是CSSStyleDeclaration的实例，包含当前元素全部计算后的样式。
+
+IE也没有返回border样式，因为这是一个综合属性。
+
+##### 总结
+
+无论在哪个浏览器中，最重要的一条是要记住所有计算的样式都是只读的；不能修改计算后样式对象中的CSS属性。
+
+### 12.2.2 操作样式表
+
+
+
+CSSStyleSheet类型表示的是样式表，包括通过<link>元素包含的样式表和在<style>元素中定义的样式表。
+
+> 这两个元素本身分别是由HTMLLinkElement和HTMLStyleElement类型表示的。但是，CSSStyleSheet类型相对更加通用一些，它只表示样式表，而不管这些样式表在HTML中是如何定义的。此外，上述两个针对元素的类型允许修改HTML特性，但CSSStyleSheet对象则是一套只读的接口（有一个属性例外）。
+
+确定浏览器是否支持DOM2级样式表。
+
+```javascript
+var supportsDOM2StyleSheets = document.implementation.hasFeature("StyleSheets", "2.0"); 
+```
+
+CSSStyleSheet 继承自StyleSheet，后者可以作为一个基础接口来定义非CSS样式表。
+
+继承而来的属性:
+
+- disabled：表示样式表是否被禁用的布尔值。这个属性是可读/写的，将这个值设置为true可以禁用样式表。
+- href：如果样式表是通过<link>包含的，则是样式表的URL；否则，是null。
+- media：当前样式表支持的所有媒体类型的集合。与所有DOM集合一样，这个集合也有一个length属性和一个item()方法。也可以使用方括号语法取得集合中特定的项。如果集合是空列表，表示样式表适用于所有媒体。在IE中，media是一个反映<link>和<style>元素media特性值的字符串。
+- ownerNode：指向拥有当前样式表的节点的指针，样式表可能是在HTML中通过<link>或<style/>引入的（在XML中可能是通过处理指令引入的）。如果当前样式表是其他样式表通过@import导入的，则这个属性值为null。IE不支持这个属性。
+- parentStyleSheet：在当前样式表是通过@import导入的情况下，这个属性是一个指向导入它的样式表的指针。
+- title：ownerNode中title属性的值。
+- type：表示样式表类型的字符串。对CSS样式表而言，这个字符串是"type/css"。除了disabled 属性之外，其他属性都是只读的。
+
+除了disabled 属性之外，其他属性都是只读的。
+
+在支持以上所有这些属性的基础上，CSSStyleSheet类型还支持下列属性和方法：
+
+- cssRules：样式表中包含的样式规则的集合。IE不支持这个属性，但有一个类似的rules属性。
+- ownerRule：如果样式表是通过@import导入的，这个属性就是一个指针，指向表示导入的规则；否则，值为null。IE不支持这个属性。
+- deleteRule(index)：删除cssRules集合中指定位置的规则。IE不支持这个方法，但支持一个类似的removeRule()方法。
+- insertRule(rule,index)：向cssRules集合中指定的位置插入rule字符串。IE不支持这个方法，但支持一个类似的addRule()方法。
+
+应用于文档的所有样式表是通过document.styleSheets集合来表示的。
+
+不同浏览器的document.styleSheets返回的样式表也不同。所有浏览器都会包含<style>元素和rel特性被设置为"stylesheet"的<link>元素引入的样式表。IE和Opera也包含rel特性被设置为"alternate stylesheet"的<link>元素引入的样式表。
+
+也可以直接通过<link>或<style>元素取得CSSStyleSheet 对象。DOM规定了一个包含CSSStyleSheet 对象的属性，名叫sheet；除了IE，其他浏览器都支持这个属性。IE 支持的是styleSheet属性。
+
+#### 1. CSS规则
+
+CSSStyleRule对象包含下列属性。
+
+- cssText：返回整条规则对应的文本。由于浏览器对样式表的内部处理方式不同，返回的文本可能会与样式表中实际的文本不一样；Safari始终都会将文本转换成全部小写。IE不支持这个属性。
+- parentRule：如果当前规则是导入的规则，这个属性引用的就是导入规则；否则，这个值为null。IE不支持这个属性。
+- parentStyleSheet：当前规则所属的样式表。IE不支持这个属性。
+- selectorText：返回当前规则的选择符文本。由于浏览器对样式表的内部处理方式不同，返回的文本可能会与样式表中实际的文本不一样（例如，Safari 3之前的版本始终会将文本转换成全部小写）。在Firefox、Safari、Chrome和IE中这个属性是只读的。Opera允许修改selectorText。
+- style：一个CSSStyleDeclaration对象，可以通过它设置和取得规则中特定的样式值。
+- type：表示规则类型的常量值。对于样式规则，这个值是1。IE不支持这个属性。
+
+#### 2.创建规则
+
+##### insertRule()
+
+DOM规定，要向现有样式表中添加新规则，需要使用insertRule()方法。
+
+这个方法接受两个参数：规则文本和表示在哪里插入规则的索引。
+
+插入的规则将成为样式表中的第一条规则（插入到了位置0）——规则的次序在确档的定层叠之后应用到文规则时至关重要。Firefox、Safari、Opera和Chrome都支持insertRule()方法。
+
+##### addRule()
+
+IE8 及更早版本支持一个类似的方法，名叫addRule()，也接收两必选参数：选择符文本和CSS样式信息；一个可选参数：插入规则的位置。
+
+有关这个方法的规定中说，最多可以使用addRule()添加4 095条样式规则。超出这个上限的调用将会导致错误。
+
+#### 3.删除规则
+
+##### deleteRule()
+
+这个方法接受一个参数：要删除的规则的位置。
+
+IE支持的类似方法叫removeRule()，使用方法相同考虑到删除规则可能会影响CSS层叠的效果，要慎重使用。
+
+### 12.2.3 元素大小
+
+#### 1.偏移量
+
+元素的可见大小由其高度、宽度决定，包括所有内边距、滚动条和边框大小（注意，不包括外边距）。
+
+通过下列4个属性可以取得元素的偏移量。
+
+- offsetHeight：元素在垂直方向上占用的空间大小，以像素计。包括元素的高度、（可见的）水平滚动条的高度、上边框高度和下边框高度。
+- offsetWidth：元素在水平方向上占用的空间大小，以像素计。包括元素的宽度、（可见的）垂直滚动条的宽度、左边框宽度和右边框宽度。
+- offsetLeft：元素的左外边框至包含元素的左内边框之间的像素距离。
+- offsetTop：元素的上外边框至包含元素的上内边框之间的像素距离。
+
+其中，offsetLeft和offsetTop属性与包含元素有关，包含元素的引用保存在offsetParent属性中。offsetParent属性不一定与parentNode的值相等。
+
+> 例如，<td>元素的offsetParent是作为其祖先元素的<table>元素，因为<table>是在DOM层次中距<td>最近的一个**具有大小**的元素。
+
+要想知道某个元素在页面上的偏移量，将这个元素的offsetLeft和offsetTop与其offsetParent的相同属性相加，如此循环直至根元素，就可以得到一个基本准确的值。
+
+所有这些偏移量属性都是只读的，而且每次访问它们都需要重新计算。因此，应该尽量避免重复访问这些属性；如果需要重复使用其中某些属性的值，可以将它们保存在局部变量中，以提高性能。
+
+#### 2. 客户区大小
+
+元素的客户区大小（client dimension），指的是元素内容及其内边距所占据的空间大小。
+
+有关客户区大小的属性有两个：clientWidth和clientHeight。其中，clientWidth属性是元素内容区宽度加上左右内边距宽度；clientHeight属性是元素内容区高度加上上下内边距高度。
+
+要确定浏览器视口大小，可以使用document.documentElement或document.body（在IE7 之前的版本中）的
+clientWidth和clientHeight。
+
+与偏移量相似，客户区大小也是只读的，也是每次访问都要重新计算的。
+
+#### 3. 滚动大小
+
+与滚动大小相关的属性。
+
+- scrollHeight：在没有滚动条的情况下，元素内容的总高度。
+- scrollWidth：在没有滚动条的情况下，元素内容的总宽度。
+- scrollLeft：被隐藏在内容区域左侧的像素数。通过设置这个属性可以改变元素的滚动位置。
+- scrollTop：被隐藏在内容区域上方的像素数。通过设置这个属性可以改变元素的滚动位置。
+
+对于不包含滚动条的页面而言，这些属性会在不同浏览器间发现一些不一致性问题
+
+- Firefox中这两组属性始终都是相等的，但大小代表的是文档内容区域的实际尺寸，而非视口的尺寸。
+- Opera、Safari 3.1及更高版本、Chrome中的这两组属性是有差别的，其中scrollWidth 和scrollHeight等于视口大小，而clientWidth和clientHeight等于文档内容区域的大小。
+- IE（在标准模式）中的这两组属性不相等，其中scrollWidth和scrollHeight等于文档内容区域的大小，而clientWidth和clientHeight等于视口大小。
+
+在确定文档的总高度时（包括基于视口的最小高度时），必须取得scrollWidth/clientWidth和scrollHeight/clientHeight中的最大值，才能保证在跨浏览器的环境下得到精确的结果
+
+> 注意，对于运行在混杂模式下的IE，则需要用document.body 代替document.documentElement。
+
+通过scrollLeft和scrollTop属性既可以确定元素当前滚动的状态，也可以设置元素的滚动位置。
+
+将元素的scrollLeft和scrollTop设置为0，就可以重置元素的滚动位置。
+
+#### 4.确定元素大小
+
+##### getBoundingClientRect()方法。
+
+这个方法返回会一个矩形对象，包含4个属性：left、top、right和bottom。这些属性给出了元素在页面中相对于视口的位置。
+
+但是，浏览器的实现稍有不同。IE8及更早版本认为文档的左上角坐标是(2, 2)，而其他浏览器包括IE9则将传统的(0,0)作为起点坐标。
+
+对于不支持getBoundingClientRect()的浏览器，可以通过其他手段取得相同的信息。一般来说，right和left的差值与offsetWidth的值相等，而bottom和top的差值与offsetHeight相等。而且，left和top属性大致等于使用getElementLeft()和getElementTop()函数取得的值。
+
+## 12.3遍历
+
+“DOM2级遍历和范围”模块定义了两个用于辅助完成顺序遍历DOM结构的类型：NodeIterator和TreeWalker。这两个类型能够基于给定的起点对DOM结构执行深度优先（depth-first）的遍历操作。
+
+在与DOM兼容的浏览器中支持。IE不支持DOM遍历。使用下列代码可以检测浏览器对DOM2级遍历能力的支持情况。
+
+```javascript
+var supportsTraversals = document.implementation.hasFeature("Traversal", "2.0");
+var supportsNodeIterator = (typeof document.createNodeIterator == "function");
+var supportsTreeWalker = (typeof document.createTreeWalker == "function");
+```
+
+### 12.3.1 NodeIterator
+
+可使用document.createNodeIterator()方法创建它的新实例。这个方法接受下列4个参数。
+
+- root：想要作为搜索起点的树中的节点。
+- whatToShow：表示要访问哪些节点的数字代码。
+- filter：是一个NodeFilter对象，或者一个表示应该接受还是拒绝某种特定节点的函数。
+- entityReferenceExpansion：布尔值，表示是否要扩展实体引用。这个参数在HTML页面中没有用，因为其中的实体引用不能扩展。
+
+##### 参数说明
+
+whatToShow参数是一个位掩码，通过应用一或多个过滤器（filter）来确定要访问哪些节点。这个参数的值以常量形式在NodeFilter类型中定义，如下所示。
+
+- NodeFilter.SHOW_ALL：显示所有类型的节点。
+- NodeFilter.SHOW_ELEMENT：显示元素节点。
+- NodeFilter.SHOW_ATTRIBUTE：显示特性节点。由于DOM结构原因，实际上不能使用这个值。
+- NodeFilter.SHOW_TEXT：显示文本节点。
+- NodeFilter.SHOW_CDATA_SECTION：显示CDATA节点。对HTML页面没有用。
+- NodeFilter.SHOW_ENTITY_REFERENCE：显示实体引用节点。对HTML页面没有用。
+- NodeFilter.SHOW_ENTITYE：显示实体节点。对HTML页面没有用。
+- NodeFilter.SHOW_PROCESSING_INSTRUCTION：显示处理指令节点。对HTML页面没有用。
+- NodeFilter.SHOW_COMMENT：显示注释节点。
+- NodeFilter.SHOW_DOCUMENT：显示文档节点。
+- NodeFilter.SHOW_DOCUMENT_TYPE：显示文档类型节点。
+- NodeFilter.SHOW_DOCUMENT_FRAGMENT：显示文档片段节点。对HTML页面没有用。
+- NodeFilter.SHOW_NOTATION：显示符号节点。对HTML页面没有用。
+
+可以使用按位或操作符来组合多个选项
+
+可以通过createNodeIterator()方法的filter参数来指定自定义的NodeFilter对象，或者指定一个功能类似节点过滤器（node filter）的 函 数 。每 个NodeFilter对象只有一个方法，即accept- Node()；如果应该访问给定的节点，该方法返回NodeFilter.FILTER_ACCEPT，如果不应该访问给定的节点，该方法返回NodeFilter.FILTER_SKIP。由于NodeFilter是一个抽象的类型，因此不能直接创建它的实例。在必要时，只要创建一个包含acceptNode()方法的对象，然后将这个对象传入createNodeIterator()中即可。
+
+NodeIterator类型的两个主要方法是nextNode()和previousNode()。
+
+当遍历到DOM子树的最后一个节点时，nextNode()返回null。previousNode()方法的工作机制类似。当遍历到DOM子树的最后一个节点，且previousNode()返回根节点之后，再次调用它就会返回null。
+
+Firefox 3.5之前的版本没有实现createNodeIterator()方法，但支持createTreeWalker()方法。
+
+### 12.3.2 TreeWalker
+
+TreeWalker是NodeIterator的一个更高级的版本，还提供了下列用于在不同方向上遍历DOM结构的方法。
+
+- parentNode()：遍历到当前节点的父节点；
+- firstChild()：遍历到当前节点的第一个子节点；
+- lastChild()：遍历到当前节点的最后一个子节点；
+- nextSibling()：遍历到当前节点的下一个同辈节点；
+- previousSibling()：遍历到当前节点的上一个同辈节点。
+
+创建TreeWalker对象要使用document.createTreeWalker()方法，这个方法接受的4个参数与document.createNodeIterator()方法相同：作为遍历起点的根节点、要显示的节点类型、过滤器和一个表示是否扩展实体引用的布尔值。
+
+filter可以返回的值有所不同。除了NodeFilter.FILTER_ACCEPT和NodeFilter.FILTER_SKIP 之外，还可以使用NodeFilter.FILTER_REJECT。
+
+在使用NodeIterator 对象时，NodeFilter.FILTER_SKIP与NodeFilter.FILTER_REJECT的作用相同：跳过指定的节点。但在使用TreeWalker对象时，NodeFilter.FILTER_SKIP会跳过相应节点继续前进到子树中的下一个节点，
+而NodeFilter.FILTER_REJECT 则会跳过相应节点及该节点的整个子树。
+
+TreeWalker真正强大的地方在于能够在DOM结构中沿任何方向移动。
+TreeWalker类型还有一个属性，名叫currentNode，表示任何遍历方法在上一次遍历中返回的节点。通过设置这个属性也可以修改遍历继续进行的起点
+
+## 12.4 范围
+
+通过范围可以选择文档中的一个区域，而不必考虑节点的界限（选择在后台完成，对用户是不可见的）。在常规的DOM操作不能更有效地修改文档时，使用范围往往可以达到目的。
+Firefox、Opera、Safari和Chrome都支持DOM范围。IE以专有方式实现了自己的范围特性。
+
+### 12.4.1 DOM中的范围
+
+##### createRange()方法。
+
+在兼容DOM的浏览器中，这个方法属于document对象。
+使用hasFeature()或者直接检测该方法，都可以确定浏览器是否支持范围。
+
+```javascript
+var supportsRange = document.implementation.hasFeature("Range", "2.0");
+var alsoSupportsRange = (typeof document.createRange == "function");
+```
+
+每个范围由一个Range类型的实例表示，这个实例拥有很多属性和方法。下列属性提供了当前范围在文档中的位置信息。
+
+- startContainer：包含范围起点的节点（即选区中第一个节点的父节点）。
+- startOffset：范围在startContainer中起点的偏移量。如果startContainer是文本节点、注释节点或CDATA节点，那么startOffset就是范围起点之前跳过的字符数量。否则，startOffset就是范围中第一个子节点的索引。
+- endContainer：包含范围终点的节点（即选区中最后一个节点的父节点）。
+- endOffset：范围在endContainer中终点的偏移量（与startOffset遵循相同的取值规则）。
+- commonAncestorContainer：startContainer和endContainer共同的祖先节点在文档树中位置最深的那个。
+
+#### 1. 用DOM范围实现简单选择
+
+要使用范围来选择文档中的一部分，使用selectNode()或selectNodeContents()。
+这两个方法都接受一个参数，即一个DOM节点，然后使用该节点中的信息来填充范围。
+其中，selectNode()方法选择整个节点，包括其子节点；而selectNodeContents()方法则只选择节点的子节点。
+
+为了更精细地控制将哪些节点包含在范围中，还可以使用下列方法。
+
+- setStartBefore(refNode)
+
+  将范围的起点设置在refNode之前，因此refNode也就是范围选区中的第一个子节点。同时会将startContainer属性设置为refNode.parentNode，将startOffset属性设置为refNode在其父节点的childNodes集合中的索引。
+
+- setStartAfter(refNode)
+
+  将范围的起点设置在refNode之后，因此refNode也就不在范围之内了，其下一个同辈节点才是范围选区中的第一个子节点。同时会将startContainer属性设置为refNode.parentNode，将startOffset 属性设置为refNode 在其父节点的childNodes集合中的索引加1。
+
+- setEndBefore(refNode)
+
+  将范围的终点设置在refNode之前，因此refNode也就不在范围之内了，其上一个同辈节点才是范围选区中的最后一个子节点。同时会将endContainer属性设置为refNode.parentNode，将endOffset属性设置为refNode在其父节点的childNodes集合中的索引。
+
+- setEndAfter(refNode)
+
+  将范围的终点设置在refNode之后，因此refNode也就是范围选区中的最后一个子节点。同时会将endContainer 属性设置为refNode.parentNode，将endOffset属性设置为refNode在其父节点的childNodes集合中的索引加1。
+
+#### 2. 用DOM范围实现复杂选择
+
+##### setStart()和setEnd()方法
+
+这两个方法都接受两个参数：一个参照节点和一个偏移量值。
+对setStart()来说，参照节点会变成startContainer，而偏移量值会变成startOffset。
+对于setEnd()来说，参照节点会变成endContainer，而偏移量值会变成endOffset。
+
+setStart()和setEnd()的主要用途，能够选择节点的一部分。
+
+#### 3.操作DOM范围中的内容
+
+##### deleteContents()
+
+这个方法能够从文档中删除范围所包含的内容。由于范围选区在修改底层DOM结构时能够保证格式良好，因此即使内容被删除了，最终的DOM结构依旧是格式良好的。
+
+##### extractContents()
+
+也会从文档中移除范围选区。与deleteContents()方法的区别在于，extractContents()会返回范围的文档片段。利用这个返回的值，可以将范围的内容插入到文档中的其他地方。
+
+##### cloneContents()
+
+创建范围对象的一个副本，然后在文档的其他地方插入该副本。
+
+#### 4.插入DOM范围中的内容
+
+##### insertNode()
+
+向范围选区的开始处插入一个节点
+使用这种技术可以插入一些帮助提示信息，例如在打开新窗口的链接旁边插入一幅图像。
+
+##### surroundContents()
+
+环绕范围插入内容。这个方法接受一个参数，即环绕范围内容的节点。
+在环绕范围插入内容时，后台会执行下列步骤。
+
+- 提取出范围中的内容（类似执行extractContent()）；
+- 将给定节点插入到文档中原来范围所在的位置上；
+- 将文档片段的内容添加到给定节点中。
+
+可以使用这种技术来突出显示网页中的某些词句
+
+#### 5.折叠DOM范围
+
+所谓折叠范围，就是指范围中未选择文档的任何部分。可以用文本框来描述折叠范围的过程。
+
+##### collapse()
+
+接受一个参数，一个布尔值，表示要折叠到范围的哪一端。参数true表示折叠到范围的起点，参数false表示折叠到范围的终点。
+要确定范围已经折叠完毕，可以检查collapsed属性
+检测某个范围是否处于折叠状态，可以帮我们确定范围中的两个节点是否紧密相邻。
+
+#### 6.比较DOM范围
+
+##### compareBoundaryPoints()
+
+确定这些范围是否有公共的边界（起点或终点）。
+这个方法接受两个参数：表示比较方式的常量值和要比较的范围。
+表示比较方式的常量值如下所示。
+
+- Range.START_TO_START(0)：比较第一个范围和第二个范围的起点；
+- Range.START_TO_END(1)：比较第一个范围的起点和第二个范围的终点；
+- Range.END_TO_END(2)：比较第一个范围和第二个范围的终点；
+- Range.END_TO_START(3)：比较第一个范围的终点和第一个范围的起点。
+
+返回值如下：
+
+- 如果第一个范围中的点位于第二个范围中的点之前，返回-1；
+- 如果两个点相等，返回0；如果第一个范围中的点位于第二个范围中的点之后，返回1。
+
+#### 7. 复制DOM范围
+
+##### cloneRange()
+
+这个方法会创建调用它的范围的一个副本。
+
+#### 8. 清理DOM范围
+
+在使用完范围之后，最好是调用detach()方法，以便从创建范围的文档中分离出该范围。
+
+### 12.4.2 IE8及更早版本中的范围
+
+IE8及之前版本不支持DOM范围,支持文本范围。文本范围是IE专有的特性，其他浏览器都不支持。
+
+通过<body>、<button>、<input>和<textarea>等这几个元素，可以调用createTextRange()方法来创建文本范围。
+
+```javascript
+var range = document.body.createTextRange();
+```
+
+#### 1. 用IE范围实现简单的选择
+
+##### findText()
+
+这个方法会找到第一次出现的给定文本，并将范围移过来以环绕该文本。如果没有找到文本，这个方法返回false；否则返回true。
+
+还可以为findText()传入另一个参数，即一个表示向哪个方向继续搜索的数值。负值表示应该从当前位置向后搜索，而正值表示应该从当前位置向前搜索。
+
+##### moveToElementText()
+
+IE中与DOM中的selectNode()方法最接近，这个方法接受一个DOM元素，并选择该元素的所有文本，包括HTML标签。
+
+在文本范围中包含HTML的情况下，可以使用htmlText属性取得范围的全部内容，包括HTML和文本
+
+##### parentElement()
+
+IE的范围没有任何属性可以随着范围选区的变化而动态更新。不过，其parentElement()方法倒是与DOM的commonAncestorContainer属性类似。
+
+#### 2.使用IE范围实现复杂的选择
+
+##### move()、moveStart()、moveEnd()和expand()
+
+这些方法都接受两个参数：移动单位和移动单位的数量。
+其中，移动单位是下列一种字符串值。
+
+- "character"：逐个字符地移动。
+- "word"：逐个单词（一系列非空格字符）地移动。
+- "sentence"：逐个句子（一系列以句号、问号或叹号结尾的字符）地移动。
+- "textedit"：移动到当前范围选区的开始或结束位置。
+
+通过moveStart()方法可以移动范围的起点，通过moveEnd()方法可以移动范围的终点，移动的幅度由单位数量指定
+
+使用expand()方法可以将范围规范化。换句话说，expand()方法的作用是将任何部分选择的文本全部选中。
+
+move()方法则首先会折叠当前范围（让起点和终点相等），然后再将范围移动指定的单位数量
+
+#### 3. 操作IE范围中的内容
+
+可以使用text属性或pasteHTML()方法
+注意，在设置text属性的情况下，HTML标签保持不变。
+要向范围中插入HTML代码，就得使用pasteHTML()方法
+不过，在范围中包含HTML代码时，不应该使用pasteHTML()，因为这样很容易导致不可预料的结果——很可能是格式不正确的HTML。
+
+#### 4. 折叠IE范围
+
+##### collapse()
+
+传入true把范围折叠到起点，传入false把范围折叠到终点。
+
+boundingWidth属性，该属性返回范围的宽度（以像素为单位）。如果boundingWidth属性等于0，就说明范围已经折叠了
+此外，还有boundingHeight、boundingLeft 和boundingTop 等属性
+
+#### 5. 比较IE范围
+
+##### compareEndPoints()
+
+compareEndPoints()方法与DOM范围的compareBoundaryPoints()方法类似。
+这个方法接受两个参数：比较的类型和要比较的范围。
+比较类型的取值范围是下列几个字符串值："StartToStart"、"StartToEnd"、"EndToEnd"和"EndToStart"。这几种比较类型与比较DOM范围时使用的几个值是相同的。
+同样与DOM类似的是，compareEndPoints()方法也会按照相同的规则返回值，即如果第一个范围的边界位于第二个范围的边界前面，返回-1；如果二者边界相同，返回0；如果第一个范围的边界位于第二个范围的边界后面，返回1。
+
+##### isEqual()和inRange()
+
+isEqual()用于确定两个范围是否相等，inRange()用于确定一个范围是否包含另一个范围。
+
+#### 6. 复制IE范围
+
+##### duplicate()
+
+在IE中使用duplicate()方法可以复制文本范围，结果会创建原范围的一个副本，新创建的范围会带有与原范围完全相同的属性。
+
+## 12.5 小结
+
+“DOM2级样式”模块主要针对操作元素的样式信息而开发，其特性简要总结如下。
+
+- 每个元素都有一个关联的style对象，可以用来确定和修改行内的样式。
+- 要确定某个元素的计算样式（包括应用给它的所有CSS规则），可以使用getComputedStyle()方法。
+- IE不支持getComputedStyle()方法，但为所有元素都提供了能够返回相同信息currentStyle属性。
+- 可以通过document.styleSheets集合访问样式表。
+- 除IE之外的所有浏览器都支持针对样式表的这个接口，IE也为几乎所有相应的DOM功能提供了自己的一套属性和方法。
+
+“DOM2级遍历和范围”模块提供了与DOM结构交互的不同方式，简要总结如下。
+
+- 遍历即使用NodeIterator或TreeWalker对DOM执行深度优先的遍历。
+- NodeIterator是一个简单的接口，只允许以一个节点的步幅前后移动。而TreeWalker在提供相同功能的同时，还支持在DOM结构的各个方向上移动，包括父节点、同辈节点和子节点等方向。
+- 范围是选择DOM结构中特定部分，然后再执行相应操作的一种手段。
+- 使用范围选区可以在删除文档中某些部分的同时，保持文档结构的格式良好，或者复制文档中的相应部分。
+- IE8及更早版本不支持“DOM2级遍历和范围”模块，但它提供了一个专有的文本范围对象，可以用来完成简单的基于文本的范围操作。IE9完全支持DOM遍历。
+
+
 
 # 第15章 使用 Canvas 绘图
 
