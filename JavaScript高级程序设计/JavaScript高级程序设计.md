@@ -412,7 +412,7 @@ PS：
 - 这4个操作符对任何值都适用，遵循下列规则
   -  在应用于一个包含有效数字字符的字符串时，先将其转换为数字值，再执行加减1的操作。字符串变量变成数值变量。
   -  在应用于一个不包含有效数字字符的字符串时，将变量的值设置为NaN
-                字符串变量变成数值变量。
+                 字符串变量变成数值变量。
   -  在应用于布尔值false时，先将其转换为0再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于布尔值true时，先将其转换为1再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于浮点数值时，执行加减1的操作。
@@ -3583,7 +3583,1080 @@ isEqual()用于确定两个范围是否相等，inRange()用于确定一个范�
 
 
 
+# 第16章 HTML5脚本编程
 
+## 16.1 跨文档消息传递
+
+跨文档消息传送（cross-document messaging），有时候简称为XDM，指的是在来自不同域的页面间
+传递消息。
+
+XDM的核心是postMessage()方法。对于XDM而言，传递的对象是包含在当前页面中的`<iframe>`元素，或者由当前页面弹出的窗口。
+
+postMessage()方法接收两个参数：一条消息和一个表示消息接收方来自哪个域的字符串。第二个参数对保障安全通信非常重要，可以防止浏览器把消息发送到不安全的地方。
+
+```javascript
+//注意：所有支持XDM的浏览器也支持iframe的contentWindow属性
+var iframeWindow = document.getElementById("myframe").contentWindow; 
+iframeWindow.postMessage("A secret", "http://www.wrox.com"); 
+```
+
+接收到XDM消息时，会触发window对象的message事件。这个事件是以异步形式触发的，因此从发送消息到接收消息（触发接收窗口的message事件）可能要经过一段时间的延迟。
+
+触发message事件后，传递给onmessage处理程序的事件对象包含以下三方面的重要信息。
+
+- data：作为postMessage()第一个参数传入的字符串数据。
+- origin：发送消息的文档所在的域，例如"http://www.wrox.com"。
+- source：发送消息的文档的window对象的代理。这个代理对象主要用于在发送上一条消息的窗口中调用postMessage()方法。如果发送消息的窗口来自同一个域，那这个对象就是window。
+
+接收到消息后验证发送窗口的来源的基本的检测模式如下：
+
+```javascript
+EventUtil.addHandler(window, "message", function(event){ 
+	//确保发送消息的域是已知的域
+	if (event.origin == "http://www.wrox.com"){ 
+        //处理接收到的数据
+        processMessage(event.data); 
+    	//可选：向来源窗口发送回执
+    	event.source.postMessage("Received!", "http://p2p.wrox.com"); 
+    } 
+}); 
+```
+
+注意：event.source大多数情况下只是window对象的代理，并非实际的window对象。换句话说，不能通过这个代理对象访问window对象的其他任何信息。
+
+XDM还有一些怪异之处：postMessage()的第一个参数最早是作为“永远都是字符串”来实现的。如果你想传入结构化的数据，最佳选择是先在要传入的数据上调用JSON.stringify()，通过postMessage()传入得到的字符串，然后再在onmessage事件处理程序中调用JSON.parse()。
+
+支持XDM的浏览器有IE8+、Firefox 3.5+、Safari 4+、Opera、Chrome、iOS版Safari及Android版
+WebKit。
+
+## 16.2 原生拖放
+
+### 16.2.1 拖放事件
+
+拖动某元素时，将依次触发下列事件：
+
+1. dragstart 
+2. drag 
+3. dragend 
+
+按下鼠标键并开始移动鼠标时，会在被拖放的元素上触发dragstart事件。拖动开始时，可以通过ondragstart事件处理程序来运行JavaScript代码。
+
+触发dragstart事件后，随即会触发drag事件，而且在元素被拖动期间会持续触发该事件。这
+个事件与mousemove事件相似，在鼠标移动过程中，mousemove事件也会持续发生。
+
+当拖动停止时（无论是把元素放到了有效的放置目标，还是放到了无效的放置目标上），会触发dragend事件。
+
+当某个元素被拖动到一个有效的放置目标上时，下列事件会依次发生：
+
+1. dragenter 
+2. dragover 
+3. dragleave或drop
+
+只要有元素被拖动到放置目标上，就会触发dragenter事件（类似于mouseover事件）。
+
+紧随其后的是dragover事件，而且在被拖动的元素还在放置目标的范围内移动时，就会持续触发该事件。
+
+如果元素被拖出了放置目标，dragover事件不再发生，但会触发dragleave事件（类似于mouseout
+事件）。如果元素被放到了放置目标中，则会触发drop事件而不是dragleave事件。
+
+### 16.2.2 自定义放置目标
+
+有些元素默认是不允许放置的。可以把任何元素变成有效的放置目标，方法是重写dragenter和dragover事件的默认行为。
+
+```javascript
+var droptarget = document.getElementById("droptarget"); 
+EventUtil.addHandler(droptarget, "dragover", function(event){ 
+	EventUtil.preventDefault(event); 
+}); 
+EventUtil.addHandler(droptarget, "dragenter", function(event){ 
+	EventUtil.preventDefault(event); 
+}); 
+```
+
+在Firefox 3.5+中，放置事件的默认行为是打开被放到放置目标上的URL。因此，为了让Firefox支持正常的拖放，还要取消drop事件的默认行为，阻止它打开URL：
+
+```javascript
+EventUtil.addHandler(droptarget, "drop", function(event){ 
+	EventUtil.preventDefault(event); 
+}); 
+```
+
+### 16.2.3 dataTransfer对象
+
+dataTransfer对象，它是事件对象的一个属性，用于从被拖动元素向放置目标传递字符串格式的数据。
+
+目前，HTML5规范草案也收入了dataTransfer对象。
+
+dataTransfer对象有两个主要方法：getData()和setData()。
+
+setData()方法的第一个参数，也是getData()方法唯一的一个参数，是一个字符串，表示保存的数据类型，取值为"text"或"URL"
+
+IE只定义了"text"和"URL"两种有效的数据类型，而HTML5则对此加以扩展，允许指定各种MIME类型。考虑到向后兼容，HTML5也支持"text"和"URL"，但这两种类型会被映射为"text/plain"和"text/uri-list"。
+
+实际上，dataTransfer对象可以为每种MIME类型都保存一个值。不过，保存在dataTransfer对象中的数据只能在drop事件处理程序中读取。如果在ondrop处理程序中没有读到数据，那就是dataTransfer对象已经被销毁，数据也丢失了。
+
+在拖动文本框中的文本时，浏览器会调用setData()方法，将拖动的文本以"text"格式保存在dataTransfer对象中。类似地，在拖放链接或图像时，会调用setData()方法并保存URL。可以在dragstart事件处理程序中调用setData()
+
+将数据保存为文本和保存为URL是有区别的。如果将数据保存为文本格式，那么数据不会得到任
+何特殊处理。而如果将数据保存为URL，浏览器会将其当成网页中的链接。
+
+Firefox 在其第5 个版本之前不能正确地将"url"和"text"映射为"text/uri-list"和"text/plain"。但是却能把"Text"（T大写）映射为"text/plain"。
+
+### 16.2.4 dropEffect与effectAllowed
+
+dropEffect属性可以知道被拖动的元素能够执行哪种放置行为。有下列4个可能的值。
+
+- "none"：不能把拖动的元素放在这里。这是除文本框之外所有元素的默认值。
+- "move"：应该把拖动的元素移动到放置目标。
+- "copy"：应该把拖动的元素复制到放置目标。
+- "link"：表示放置目标会打开拖动的元素（但拖动的元素必须是一个链接，有URL）。
+
+浏览器只能帮你改变光标的样式，而其他的都要靠你自己来实现。要使用dropEffect属性，必须在ondragenter事件处理程序中针对放置目标来设置它。
+
+dropEffect属性只有搭配effectAllowed属性才有用。effectAllowed属性表示允许拖动元素的哪种dropEffect，effectAllowed属性可能的值如下。
+
+- "uninitialized"：没有给被拖动的元素设置任何放置行为。
+- "none"：被拖动的元素不能有任何行为。
+- "copy"：只允许值为"copy"的dropEffect。
+- "link"：只允许值为"link"的dropEffect。
+- "move"：只允许值为"move"的dropEffect。
+- "copyLink"：允许值为"copy"和"link"的dropEffect。
+- "copyMove"：允许值为"copy"和"move"的dropEffect。
+- "linkMove"：允许值为"link"和"move"的dropEffect。
+- "all"：允许任意dropEffect。
+
+必须在ondragstart事件处理程序中设置effectAllowed属性。
+
+> Firefox 5及之前的版本在处理effectAllowed属性时有一个问题，即如果你在代码中设置了这个属性的值，那不一定会触发drop事件
+
+### 16.2.5 可拖动
+
+HTML5为所有HTML元素规定了一个draggable属性，表示元素是否可以拖动。图像和链接的draggable属性自动被设置成了true，而其他元素这个属性的默认值都是false。要想让其他元素可拖动，或者让图像或链接不能拖动，都可以设置这个属性。
+
+支持draggable属性的浏览器有IE 10+、Firefox 4+、Safari 5+和Chrome。为了让Firefox支持可拖动属性，还必须添加一个ondragstart事件处理程序，并在dataTransfer对象中保存一些信息。
+
+> 在IE9及更早版本中，通过mousedown事件处理程序调用dragDrop()能够让任何元素可拖动。而在Safari 4及之前版本中，必须额外给相应元素设置CSS样式–khtml-user-drag: element。
+
+### 16.2.6 其他成员
+
+HTML5规范规定dataTransfer对象还包含下列方法和属性。
+
+- addElement(element)：为拖动操作添加一个元素。添加这个元素只影响数据（即增加作为拖动源而响应回调的对象），不会影响拖动操作时页面元素的外观。在写作本书时，只有Firefox 3.5+实现了这个方法。
+
+
+- clearData(format)：清除以特定格式保存的数据。实现这个方法的浏览器有IE、Fireforx 3.5+、Chrome和Safari 4+。
+
+
+- setDragImage(element, x, y)：指定一幅图像，当拖动发生时，显示在光标下方。这个方法接收的三个参数分别是要显示的HTML元素和光标在图像中的x、y坐标。其中，HTML元素可以是一幅图像，也可以是其他元素。是图像则显示图像，是其他元素则显示渲染后的元素。实现这个方法的浏览器有Firefox 3.5+、Safari 4+和Chrome。
+- types：当前保存的数据类型。这是一个类似数组的集合，以"text"这样的字符串形式保存着数据类型。实现这个属性的浏览器有IE10+、Firefox 3.5+和Chrome。
+
+## 16.3 媒体元素
+
+HTML5新增了两个与媒体相关的标签:`<audio>`和`<video>`。
+
+使用这两个元素时，至少要在标签中包含src属性，指向要加载的媒体文件。还可以设置width和height属性以指定视频播放器的大小，而为poster属性指定图像的URI可以在加载视频内容期间显示一幅图像。另外，如果标签中有controls属性，则意味着浏览器应该显示UI控件，以便用户直接操作媒体。位于开始和结束标签之间的任何内容都将作为后备内容，在浏览器不支持这两个媒体元素的情况下显示。
+
+并非所有浏览器都支持所有媒体格式,为此，不用在标签中指定src属性，而是要使用一或多个`<source>`元素
+
+### 16.3.1 属性
+
+`<video>`和`<audio>`元素都提供了完善的JavaScript接口
+
+| 属 性                 | 数据类型 | 说 明                                      |
+| ------------------- | ---- | ---------------------------------------- |
+| autoplay            | 布尔值  | 取得或设置autoplay标志                          |
+| buffered            | 时间范围 | 表示已下载的缓冲的时间范围的对象                         |
+| bufferedBytes       | 字节范围 | 表示已下载的缓冲的字节范围的对象                         |
+| bufferingRate       | 整数   | 下载过程中每秒钟平均接收到的位数                         |
+| bufferingThrottled  | 布尔值  | 表示浏览器是否对缓冲进行了节流                          |
+| controls            | 布尔值  | 取得或设置controls属性，用于显示或隐藏浏览器内置的控件          |
+| currentLoop         | 整数   | 媒体文件已经循环的次数                              |
+| currentSrc          | 字符串  | 当前播放的媒体文件的URL                            |
+| currentTime         | 浮点数  | 已经播放的秒数                                  |
+| defaultPlaybackRate | 浮点数  | 取得或设置默认的播放速度。默认值为1.0秒                    |
+| duration            | 浮点数  | 媒体的总播放时间（秒数）                             |
+| ended               | 布尔值  | 表示媒体文件是否播放完成                             |
+| loop                | 布尔值  | 取得或设置媒体文件在播放完成后是否再从头开始播放                 |
+| muted               | 布尔值  | 取得或设置媒体文件是否静音                            |
+| networkState        | 整数   | 表示当前媒体的网络连接状态：0表示空，1表示正在加载，2表示正在加载元数据，3表示已经加载了第一帧，4表示加载完成 |
+| paused              | 布尔值  | 表示播放器是否暂停                                |
+| playbackRate        | 浮点数  | 取得或设置当前的播放速度。用户可以改变这个值，让媒体播放速度变快或变慢，这与defaultPlaybackRate只能由开发人员修改的defaultPlaybackRate不同 |
+| played              | 时间范围 | 到目前为止已经播放的时间范围                           |
+| readyState          | 整数   | 表示媒体是否已经就绪（可以播放了）。0表示数据不可用，1表示可以显示当前帧，2表示可以开始播放，3表示媒体可以从头到尾播放 |
+| seekable            | 时间范围 | 可以搜索的时间范围                                |
+| seeking             | 布尔值  | 表示播放器是否正移动到媒体文件中的新位置                     |
+| src                 | 字符串  | 媒体文件的来源。任何时候都可以重写这个属性                    |
+| start               | 浮点数  | 取得或设置媒体文件中开始播放的位置，以秒表示                   |
+| totalBytes          | 整数   | 当前资源所需的总字节数                              |
+| videoHeight         | 整数   | 返回视频（不一定是元素）的高度。只适用于`<video>`            |
+| videoWidth          | 整数   | 返回视频（不一定是元素）的宽度。只适用于`<video>`            |
+| volume              | 浮点数  | 取得或设置当前音量，值为0.0到1.0                      |
+
+### 16.3.2 事件
+
+| 事 件                 | 触发时机                                    |
+| ------------------- | --------------------------------------- |
+| abort               | 下载中断                                    |
+| canplay             | 可以播放时；readyState值为2                     |
+| canplaythrough      | 播放可继续，而且应该不会中断；readyState值为3            |
+| canshowcurrentframe | 当前帧已经下载完成；readyState值为1                 |
+| dataunavailable     | 因为没有数据而不能播放；readyState值为0               |
+| durationchange      | duration属性的值改变                          |
+| emptied             | 网络连接关闭                                  |
+| empty               | 发生错误阻止了媒体下载                             |
+| ended               | 媒体已播放到末尾，播放停止                           |
+| error               | 下载期间发生网络错误                              |
+| load                | 所有媒体已加载完成。这个事件可能会被废弃，建议使用canplaythrough |
+| loadeddata          | 媒体的第一帧已加载完成                             |
+| loadedmetadata      | 媒体的元数据已加载完成                             |
+| loadstart           | 下载已开始                                   |
+| pause               | 播放已暂停                                   |
+| play                | 媒体已接收到指令开始播放                            |
+| playing             | 媒体已实际开始播放                               |
+| progress            | 正在下载                                    |
+| ratechange          | 播放媒体的速度改变                               |
+| seeked              | 搜索结束                                    |
+| seeking             | 正移动到新位置                                 |
+| stalled             | 浏览器尝试下载，但未接收到数据                         |
+| timeupdate          | currentTime被以不合理或意外的方式更新                |
+| volumechange        | volume属性值或muted属性值已改变                   |
+| waiting             | 播放暂停，等待下载更多数据                           |
+
+### 16.3.3 自定义媒体播放器
+
+### 16.3.4 检测编解码器的支持情况
+
+#### canPlayType()
+
+检测浏览器是否支持某种格式和编解码器
+该方法接收一种格式/编解码器字符串，返回"probably"、"maybe"或""（ 空字符串）。
+空字符串是假值,而"probably"和"maybe"都是真值
+注意，编解码器必须用引号引起来才行。
+
+已得到支持的音频格式和编解码器:
+
+| 音 频    | 字  符  串                       | 支持的浏览器                          |
+| ------ | ----------------------------- | ------------------------------- |
+| AAC    | audio/mp4; codecs="mp4a.40.2" | IE9+、Safari 4+、iOS版Safari       |
+| MP3    | audio/mpeg                    | IE9+、Chrome                     |
+| Vorbis | audio/ogg; codecs="vorbis"    | Firefox 3.5+、Chrome、Opera 10.5+ |
+| WAV    | audio/wav; codecs="1"         | Firefox 3.5+、Opera 10.5+、Chrome |
+
+已得到支持的视频格式和编解码器。
+
+| 视 频    | 字  符  串                                  | 支持的浏览器                                   |
+| ------ | ---------------------------------------- | ---------------------------------------- |
+| H.264  | video/mp4; codecs="avc1.42E01E, mp4a.40.2" | IE9+、Safari 4+、iOS版Safari、Android版WebKit |
+| Theora | video/ogg; codecs="theora"               | Firefox 3.5+、Opera 10.5、Chrome           |
+| WebM   | video/webm; codecs="vp8, vorbis"         | Firefox 4+、Opera 10.6、Chrome             |
+
+### 16.3.5  Audio类型
+
+Audio与Image很相似，但Audio不用像Image那样必须插入到文档中。只要创建一个新实例，并传入音频源文件即可。
+
+创建新的Audio实例即可开始下载指定的文件。下载完成后，调用play()就可以播放音频。
+
+## 16.4 历史状态管理
+
+通过hashchange事件，可以知道URL的参数什么时候发生了变化，即什么时候该有所反应。而
+通过状态管理API，能够在不加载新页面的情况下改变浏览器的URL。为此，需要使用
+history.pushState()方法，该方法可以接收三个参数：状态对象、新状态的标题和可选的相对URL。
+
+执行pushState()方法后，新的状态信息就会被加入历史状态栈，而浏览器地址栏也会变成新的相对URL。但是，浏览器并不会真的向服务器发送请求。第二个参数目前还没有浏览器实现，因此完全可以只传入一个空字符串，或者一个短标题也可以。而第一个参数则应该尽可能提供初始化页面状态所需的各种信息。
+
+因为pushState()会创建新的历史状态，所以你会发现“后退”按钮也能使用了。按下“后退”按钮，会触发window对象的popstate事件。popstate事件的事件对象有一个state属性，这个属性就包含着当初以第一个参数传递给pushState()的状态对象。
+
+得到这个状态对象后，必须把页面重置为状态对象中的数据表示的状态。记住，浏览器加载的第一个页面没有状态，因此单击“后退”按钮返回浏览器加载的第一个页面时，event.state值为null。
+
+要更新当前状态，可以调用replaceState()，传入的参数与pushState()的前两个参数相同。调用这个方法不会在历史状态栈中创建新状态，只会重写当前状态。
+
+支持HTML5历史状态管理的浏览器有Firefox 4+、Safari 5+、Opera 11.5+和Chrome。
+
+> 在使用HTML5的状态管理机制时，请确保使用pushState()创造的每一个“假”URL，在Web服务器上都有一个真的、实际存在的URL与之对应。否则，单击“刷新”按钮会导致404错误。
+
+## 16.5 小结
+
+- 跨文档消息传递API能够让我们在不降低同源策略安全性的前提下，在来自不同域的文档间传递消息。
+- 原生拖放功能让我们可以方便地指定某个元素可拖动，并在操作系统要放置时做出响应。还可以创建自定义的可拖动元素及放置目标。
+
+
+- 新的媒体元素`<audio>`和`<video>`拥有自己的与音频和视频交互的API。并非所有浏览器支持所有的媒体格式，因此应该使用canPlayType()检查浏览器是否支持特定的格式。
+
+
+- 历史状态管理让我们不必卸载当前页面即可修改浏览器的历史状态栈。有了这种机制，用户就可以通过“后退”和“前进”按钮在页面状态间切换，而这些状态完全由JavaScript进行控制。
+
+
+
+# 第17章 错误处理与调试
+
+## 17.1 浏览器报告的错误
+
+### 17.1.1 IE 
+
+### 17.1.2 Firefox 
+
+### 17.1.3 Safari
+
+### 17.1.4 Opera
+
+### 17.1.5 Chrome 
+
+## 17.2 错误处理
+
+### 17.2.1 try-catch语句
+
+出错对象中包含的实际信息会因浏览器而异，但共同的是有一个保存着错误消息的message属性。ECMA-262还规定了一个保存错误类型的name属性；
+
+IE添加了与message属性完全相同的description属性，还添加了保存着内部错误数量的number属性。Firefox添加了fileName、lineNumber和stack（包含栈跟踪信息）属性。Safari添加了line（表示行号）、sourceId（表示内部错误代码）和sourceURL属性
+
+#### 1. finally子句
+
+finally子句一经使用，其代码无论如何都会执行。只要代码中包含finally子句，那么无论try还是catch语句块中的return语句都将被忽略。
+
+IE7及更早版本中有一个bug：除非有catch子句，否则finally中的代码永远不会执行。
+
+#### 2. 错误类型
+
+ECMA-262定义了下列7种错误类型：
+
+- Error 
+- EvalError 
+- RangeError 
+- ReferenceError 
+- SyntaxError 
+- TypeError 
+- URIError 
+
+Error是基类型，主要目的是供开发人员抛出自定义错误。
+
+EvalError在使用eval()函数而发生异常时被抛出。简单地说，如果没有把eval()当成函数调用，就会抛出错误
+
+RangeError类型的错误会在数值超出相应范围时触发。
+
+ReferenceError，在访问不存在的变量时会发生这种错误
+
+SyntaxError，把语法错误的JavaScript字符串传入eval()函数时，就会导致此类错误。
+
+TypeError，在变量中保存着意外的类型时，或者在访问不存在的方法时，都会导致这种错误。最常发生类型错误的情况，就是传递给函数的参数事先未经检查，结果传入类型与预期类型不相符。
+
+URIError，在使用encodeURI()或decodeURI()，而URI格式不正确时
+
+要想知道错误的类型，可以在try-catch语句的catch语句中使用instanceof操作符。
+
+#### 3. 合理使用try-catch
+
+### 17.2.2 抛出错误
+
+throw操作符，用于随时抛出自定义错误。
+抛出错误时，必须要给throw操作符指定一个值，这个值是什么类型，没有要求。
+在遇到throw操作符时，代码会立即停止执行。仅当有try-catch语句捕获到被抛出的值时，代码才会继续执行。
+
+在创建自定义错误消息时最常用的错误类型是Error、RangeError、ReferenceError和TypeError。
+
+利用原型链还可以通过继承Error来创建自定义错误类型。此时 ，需要为新创建的错误类型指定name和message属性。
+
+> IE只有在抛出Error对象的时候才会显示自定义错误消息。对于其他类型，它都无一例外地显示"exception thrown and not caught"（抛出了异常，且未被捕获）。
+
+#### 1. 抛出错误的时机
+
+#### 2. 抛出错误与使用try-catch
+
+捕获错误的目的在于避免浏览器以默认方式处理它们；而抛出错误的目的在于提供错误发生具体原因的消息。
+
+### 17.2.3 错误（error）事件
+
+任何没有通过try-catch处理的错误都会触发window对象的error事件。
+
+在任何Web浏览器中，onerror事件处理程序都不会创建event对象，但它可以接收三个参数：错误消息、错误所在的URL和行号。
+
+> 浏览器在使用这个事件处理错误时的方式有明显不同。在IE中，即使发生error事件，代码仍然会正常执行；所有变量和数据都将得到保留，因此能在onerror事件处理程序中访问它们。但在Firefox中，常规代码会停止执行，事件发生之前的所有变量和数据都将被销毁，因此几乎就无法判断错误了。
+
+图像也支持error事件。只要图像的src特性中的URL不能返回可以被识别的图像格式，就会触发error事件。
+
+### 17.2.4 处理错误的策略
+
+### 17.2.5 常见的错误类型
+
+一般来说，需要关注三种错误：
+
+- 类型转换错误
+- 数据类型错误
+- 通信错误
+
+#### 1. 类型转换错误
+
+建议使用全等（===）和不全等（!==）操作符，以避免类型转换。
+
+在流控制语句中使用非布尔值，是极为常见的一个错误来源。
+
+#### 2. 数据类型错误
+
+在将预料之外的值传递给函数的情况下，最容易发生数据类型错误。
+
+一个常见的错误就是将参数与null值进行比较。与null进行比较只能确保相应的值不是null和undefined。
+
+另一种错误的做法，就是只针对要使用的某一个特性执行特性检测。在确切知道应该传入什么类型的情况下，最好是使用instanceof来检测其数据类型
+
+大体上来说，基本类型的值应该使用typeof来检测，而对象的值则应该使用instanceof来检测。
+
+#### 3. 通信错误
+
+第一种通信错误与格式不正确的URL或发送的数据有关。最常见的问题是在将数据发送给服务器之前，没有使用encodeURIComponent()对数据进行编码。
+
+在服务器响应的数据不正确时，也会发生通信错误。
+
+### 17.2.6 区分致命错误和非致命错误
+
+对于非致命错误，可以根据下列一或多个条件来确定：
+
+- 不影响用户的主要任务；
+- 只影响页面的一部分；
+- 可以恢复；
+- 重复相同操作可以消除错误。
+
+致命错误，可以通过以下一或多个条件来确定：
+
+- 应用程序根本无法继续运行；
+- 错误明显影响到了用户的主要操作；
+- 会导致其他连带错误。
+
+### 17.2.7 把错误记录到服务器
+
+可使用Image对象来从查询字符串中取得数据，然后再将数据写入错误日志中。
+
+## 17.3 调试技术
+
+### 17.3.1 将消息记录到控制台
+
+对IE8、Firefox、Chrome和Safari来说，则可以通过console对象向JavaScript控制台中写入消息，这个对象具有下列方法。
+
+- error(message)：将错误消息记录到控制台
+- info(message)：将信息性消息记录到控制台
+- log(message)：将一般消息记录到控制台
+- warn(message)：将警告消息记录到控制台
+
+Opera 10.5之前的版本中，JavaScript控制台可以通过opera.postError()方法来访问。这个方法接受一个参数，即要写入到控制台中的参数
+
+还有一种方案是使用LiveConnect，也就是在JavaScript中运行Java代码。Firefox、Safari和Opera都支持LiveConnect，因此可以操作Java控制台。
+
+### 17.3.2 将消息记录到当前页面
+
+另一种输出调试消息的方式，就是在页面中开辟一小块区域，用以显示消息。
+
+这种技术在不支持JavaScript控制台的IE7及更早版本或其他浏览器中十分有用。
+
+### 17.3.3 抛出错误
+
+对于大型应用程序来说，自定义的错误通常都使用assert()函数抛出。这个函数接受两个参数，一个是求值结果应该为true的条件，另一个是条件为false时要抛出的错误。
+
+可以用这个assert()函数代替某些函数中需要调试的if语句，以便输出错误消息。
+
+## 17.4 常见的IE错误
+
+### 17.4.1 操作终止
+
+在IE8之前的版本中，存在操作终止。发生错误时，会出现一个模态对话框，告诉你“操作终止。”
+
+要避免这个问题，可以等到目标元素加载完毕后再对它进行操作，或者使用其他操作方法。
+
+### 17.4.2 无效字符
+
+在JavaScript文件中存在无效字符时，IE会抛出无效字符（invalid character）错误。
+
+其他浏览器对无效字符做出的反应与IE类似，Firefox会抛出非法字符（illegal character）错误，Safari会报告发生了语法错误，而Opera则会报告发生了ReferenceError（引用错误），因为它会将无效字符解释为未定义的标识符。
+
+### 17.4.3 未找到成员
+
+IE中的未找到成员错误，就是由于垃圾收集例程配合错误所直接导致的。
+
+具体来说，如果在对象被销毁之后，又给该对象赋值，就会导致未找到成员错误。而导致这个错误的，一定是COM对象。发生这个错误的最常见情形是使用event对象的时候。IE中的event对象是window的属性，该对象在事件发生时创建，在最后一个事件处理程序执行完毕后销毁。
+
+### 17.4.4 未知运行时错误
+
+当使用innerHTML或outerHTML以下列方式指定HTML时，就会发生未知运行时错误（Unknown 
+runtime error）：一是把块元素插入到行内元素时，二是访问表格任意部分（<table>、<tbody>等）的
+任意属性时。
+
+### 17.4.5 语法错误
+
+### 17.4.6 系统无法找到指定资源
+
+在使用JavaScript请求某个资源URL，而该URL的长度超过了IE对URL最长不能超过2083个字符的限制时，就会发生这个错误。
+
+## 17.5 小结
+
+下面是几种避免浏览器响应JavaScript错误的方法。
+
+- 在可能发生错误的地方使用try-catch语句，这样你还有机会以适当的方式对错误给出响应，而不必沿用浏览器处理错误的机制。
+- 使用window.onerror事件处理程序，这种方式可以接受try-catch不能处理的所有错误（仅限于IE、Firefox和Chrome）。
+
+另外，对任何Web应用程序都应该分析可能的错误来源，并制定处理错误的方案。
+
+- 首先，必须要明确什么是致命错误，什么是非致命错误。
+- 其次，再分析代码，以判断最可能发生的错误。JavaScript中发生错误的主要原因如下。
+  - 类型转换
+  - 未充分检测数据类型
+  - 发送给服务器或从服务器接收到的数据有错误
+
+
+
+# 第18章 JavaScript 与 XML
+
+## 18.1 浏览器对XML DOM的支持
+
+### 18.1.1 DOM2级核心
+
+DOM2级在document.implementation中引入了createDocument()方法。IE9+、Firefox、Opera、Chrome和Safari都支持这个方法。
+
+```javascript
+var xmldom = document.implementation.createDocument(namespaceUri, root, doctype);
+var xmldom = document.implementation.createDocument("", "root", null);
+```
+
+在通过JavaScript处理XML时，通常只使用参数root，因为这个参数指定的是XML DOM文档元素的标签名。而namespaceUri参数则很少用到，原因是在JavaScrip中管理命名空间比较困难。最后，doctype参数用得就更少了。
+
+要检测浏览器是否支持DOM2级XML，可以使用下面这行代码：
+
+```javascript
+var hasXmlDom = document.implementation.hasFeature("XML", "2.0"); 
+```
+
+### 18.1.2 DOMParser类型
+
+在解析XML之前，首先必须创建一个DOMParser 的实例，然后再调用parseFromString()方法。这个方法接受两个参数：要解析的XML字符串和内容类型（内容类型始终都应该是"text/xml"）。返回的值是一个Document的实例。
+
+DOMParser只能解析格式良好的XML，因而不能把HTML解析为HTML文档。在发生解析错误时，仍然会从parseFromString()中返回一个Document 对象，但这个对象的文档元素是`<parsererror>`，而文档元素的内容是对解析错误的描述。
+
+Firefox和Opera都会返回这种格式的文档。Safari和Chrome返回的文档也包含<parsererror>元素，
+但该元素会出现在发生解析错误的地方。IE9 会在调用parseFromString()的地方抛出一个解析错误。
+
+### 18.1.3 XMLSerializer类型
+
+XMLSerializer：将DOM文档序列化为XML字符串。
+
+Firefox、IE9+、Opera、Chrome和Safari都支持了XMLSerializer。
+
+要序列化DOM文档，首先必须创建XMLSerializer的实例，然后将文档传入其serializeToString ()方法
+
+> 如果将非DOM对象传入serializeToString()，会导致错误发生。
+
+### 18.1.4 IE8及之前版本中的XML
+
+要创建一个XML文档的实例，也要使用ActiveXObject构造函数并为其传入一个表示XML文档版本的字符串。有6种不同的XML文档版本可以供选择。
+
+- Microsoft.XmlDom：最初随同IE发布；不建议使用。
+- MSXML2.DOMDocument：为方便脚本处理而更新的版本，建议仅在特殊情况下作为后备版本使用。
+- MSXML2.DOMDocument.3.0：为了在JavaScript中使用，这是最低的建议版本。
+- MSXML2.DOMDocument.4.0：在通过脚本处理时并不可靠，使用这个版本可能导致安全警告。
+- MSXML2.DOMDocument.5.0：在通过脚本处理时并不可靠，使用这个版本同样可能导致安全警告。
+- MSXML2.DOMDocument.6.0：通过脚本能够可靠处理的最新版本。
+
+在这6个版本中，微软只推荐使用MSXML2.DOMDocument.6.0或MSXML2.DOMDocument.3.0；前者是最新最可靠的版本，而后者则是大多数Windows操作系统都支持的版本。
+
+要解析XML字符串，首先必须创建一个DOM文档，然后调用loadXML()方法。新创建的XML文档完全是一个空文档，因而不能对其执行任何操作。为loadXML()方法传入的XML字符串经解析之后会被填充到DOM文档中。
+
+如果解析过程中出错，可以在parseError属性中找到错误消息。这个属性本身是一个包含多个属性的对象，每个属性都保存着有关解析错误的某一方面信息。
+
+- errorCode：错误类型的数值编码；在没有发生错误时值为0。
+- filePos：文件中导致错误发生的位置。
+- line：发生错误的行。
+- linepos：发生错误的行中的字符。
+- reason：对错误的文本解释。
+- srcText：导致错误的代码。
+- url：导致错误的文件的URL（如果有这个文件的话）。
+
+parseError的valueOf()方法返回errorCode的值。错误类型的数值编码可能是正值，也可能是负值，因此我们只需检测它是不是等于0。
+
+#### 1. 序列化XML 
+
+IE将序列化XML的能力内置在了DOM文档中。每个DOM节点都有一个xml属性，其中保存着表示该节点的XML字符串。
+
+#### 2. 加载XML文件
+
+与DOM3级中的功能类似，要加载的XML文档必须与页面中运行的JavaScript代码来自同一台服务器。同样与DOM3级规范类似，加载文档的方式也可以分为同步和异步两种。要指定加载文档的方式，可以设置async属性，true表示异步，false表示同步（默认值为true）。
+
+在确定了加载XML文档的方式后，调用load()可以启动下载过程。这个方法接受一个参数，即要加载的XML文件的URL。在同步方式下，调用load()后可以立即检测解析错误并执行相关的XML处理
+
+在异步加载XML文件的情况下，需要为XML DOM文档的onreadystatechange事件指定处理程序。有4个就绪状态。
+​	1：DOM正在加载数据。
+​	2：DOM已经加载完数据。
+​	3：DOM已经可以使用，但某些部分可能还无法访问。
+​	4：DOM已经完全可以使用。
+
+在事件处理程序内部，还必须注意要使用XML文档变量的名称（xmldom），不能使用this对象。原因是ActiveX控件为预防安全问题不允许使用this对象。
+
+> 虽然可以通过XML DOM文档对象加载XML文件，但公认的还是使用XMLHttpRequest对象比较好。
+
+### 18.1.5 跨浏览器处理XML
+
+## 18.2 浏览器对XPath的支持
+
+### 18.2.1 DOM3级XPath
+
+要确定某浏览器是否支持DOM3级XPath：
+
+```javascript
+var supportsXPath = document.implementation.hasFeature("XPath", "3.0")
+```
+
+#### XPathEvaluator
+
+用于在特定的上下文中对XPath表达式求值。这个类型有下列3个方法。
+
+- createExpression(expression, nsresolver)：将XPath表达式及相应的命名空间信息转换成一个XPathExpression，这是查询的编译版。在多次使用同一个查询时很有用。
+- createNSResolver(node)：根据node的命名空间信息创建一个新的XPathNSResolver对象。在基于使用命名空间的XML文档求值时，需要使用XPathNSResolver对象。
+- evaluate(expression, context, nsresolver, type, result)：在给定的上下文中，基于特定的命名空间信息来对XPath表达式求值。剩下的参数指定如何返回结果。
+
+evaluate()是最常用的。这个方法接收5个参数：XPath表达式、上下文节点、命名空间求解器、返回结果的类型和保存结果的XPathResult对象（通常是null，因为结果也会以函数值的形式返回）。其中，第三个参数（命名空间求解器）只在XML代码中使用了XML命名空间时有必要指定；如果XML代码中没有使用命名空间，则这个参数应该指定为null。第四个参数（返回结果的类型）的取值范围是下列常量之一。
+
+- XPathResult.ANY_TYPE：返回与XPath表达式匹配的数据类型。
+- XPathResult.NUMBER_TYPE：返回数值。
+- XPathResult.STRING_TYPE：返回字符串值。
+- XPathResult.BOOLEAN_TYPE：返回布尔值。
+- XPathResult.UNORDERED_NODE_ITERATOR_TYPE：返回匹配的节点集合，但集合中节点的次序不一定与它们在文档中的次序一致。
+- XPathResult.ORDERED_NODE_ITERATOR_TYPE：返回匹配的节点集合，集合中节点的次序与它们在文档中的次序一致。这是最常用的结果类型。
+- XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE：返回节点集合的快照，由于是在文档外部捕获节点，因此对文档的后续操作不会影响到这个节点集合。集合中节点的次序不一定与它们在文档中的次序一致。
+- XPathResult.ORDERED_NODE_SNAPSHOT_TYPE：返回节点集合的快照，由于是在文档外部捕获节点，因此对文档的后续操作不会影响到这个节点集合。集合中节点的次序与它们在文档中的次序一致。
+- XPathResult.ANY_UNORDERED_NODE_TYPE：返回匹配的节点集合，但集合中节点的次序不一定与它们在文档中的次序一致。
+- XPathResult.FIRST_ORDERED_NODE_TYPE：返回只包含一个节点的节点集合，包含的这个节点就是文档中第一个匹配的节点。
+
+如果指定的是快照结果类型（不管是次序一致还是次序不一致的），就必须使用snapshotItem()方法和snapshotLength属性
+
+#### 1. 单节点结果
+
+指定常量XPathResult.FIRST_ORDERED_NODE_TYPE会返回第一个匹配的节点，可以通过结果的singleNodeValue属性来访问该节点。
+
+#### 2. 简单类型结果
+
+XPathResult的布尔值、数值和字符串类型分别会通过booleanValue、numberValue和stringValue属性返回一个值。
+
+对于布尔值类型，如果至少有一个节点与XPath表达式匹配，则求值结果返回true，否则返回false。
+
+对于数值类型，必须在XPath表达式参数的位置上指定一个能够返回数值的XPath函数
+
+对于字符串类型，evaluate()方法会查找与XPath表达式匹配的第一个节点，然后返回其第一个子节点的值（实际上是假设第一个子节点为文本节点）。如果没有匹配的节点，结果就是一个空字符串。
+
+#### 3. 默认类型结果
+
+要确定返回的是什么结果类型，可以检测结果的resultType属性
+
+#### 4. 命名空间支持
+
+对于利用了命名空间的XML文档，XPathEvaluator必须知道命名空间信息，然后才能正确地进行求值。
+
+处理命名空间的第一种方法是通过createNSResolver()来创建XPathNSResolver对象。这个方法接受一个参数，即文档中包含命名空间定义的节点。
+
+处理命名空间的第二种方法就是定义一个函数，让它接收一个命名空间前缀，返回关联的URI
+
+### 18.2.2 IE中的XPath 
+
+IE对XPath的支持是内置在基于ActiveX的XML DOM文档对象中的，没有使用DOMParser返回的DOM对象。因此，为了在IE9及之前的版本中使用XPath，必须使用基于ActiveX的实现。
+
+这个接口在每个节点上额外定义了两个的方法：selectSingleNode()和selectNodes()。
+
+selectSingleNode()方法接受一个XPath模式，在找到匹配节点时返回第一个匹配的节点，如果没有找到匹配的节点就返回null。
+
+selectNodes()也接收一个XPath模式作为参数，但它返回与模式匹配的所有节点的NodeList（如果没有匹配的节点，则返回一个包含零项的NodeList）。
+
+#### IE对命名空间的支持
+
+要在IE中处理包含命名空间的XPath表达式，你必须知道自己使用的命名空间，并按照下列格式创建一个字符串：
+
+```xml
+"xmlns:prefix1='uri1' xmlns:prefix2='uri2' xmlns:prefix3='uri3'"
+```
+
+传入到XML DOM文档对象的特殊方法setProperty()中，这个方法接收两个参数：要设置的属性名和属性值。
+
+### 18.2.3 跨浏览器使用XPath 
+
+要在其他使用DOM3级XPath对象的浏览器中，重新创建selectSingleNode()和selectNodes()方法。
+
+selectSingleNode()，它接收三个参数：上下文节点、XPath表达式和可选的命名空间对象。
+
+命名空间对象应该是下面这种字面量的形式。
+
+```xml
+{ 
+prefix1: "uri1", 
+prefix2: "uri2", 
+prefix3: "uri3" 
+} 
+```
+
+selectNodes()函数,接收与selectSingleNode()相同的三个参数
+
+为了求得最佳的浏览器兼容性，我们建议在JavaScript中使用XPath时，只考虑使用这两个方法。
+
+## 18.3 浏览器对XSLT的支持
+
+XSLT是与XML相关的一种技术，它利用XPath将文档从一种表现形式转换成另一种表现形式。
+
+XSLT没有正式的API，在正式的DOM规范中也没有它的位置。
+
+### 18.3.1 IE中的XSLT
+
+IE对XSLT的支持也是通过ActiveX对象实现的。
+
+从MSXML 3.0（即IE6.0）时代起，IE就支持通过JavaScript实现完整的XSLT 1.0操作。IE9中通过DOMParser创建的DOM文档不能使用XSLT。
+
+#### 1. 简单的XSLT转换
+
+使用XSLT样式表转换XML文档的最简单方式，就是将它们分别加到一个DOM文档中，然后再使用transformNode()方法。
+
+transformNode()方法：存在于文档的所有节点中，它接受一个参数，即包含XSLT样式表的文档。调用transformNode()方法会返回一个包含转换信息的字符串。
+
+如果不是在文档元素上调用transformNode()，那么转换就会从调用节点上面开始。不过，XSLT样式表则始终都可以针对调用节点所在的整个XML文档，而无需更换。
+
+#### 2. 复杂的XSLT转换
+
+第一步是要把XSLT样式表加载到一个线程安全的XML文档中。而这可以通过使用ActiveX对象MSXML2.FreeThreadedDOMDocument来做到。
+
+除了签名不同之外，线程安全的XML DOM文档与常规XML DOM文档的使用仍然是一样的
+
+在创建并加载了自由线程的DOM文档之后，必须将它指定给一个XSL模板，这也是一个ActiveX对象。
+
+在创建了XSL处理器之后，必须将要转换的节点指定给input属性。这个值可以是一个文档，也可以是文档中的任何节点。然后，调用transform()方法即可执行转换并将结果作为字符串保存在output属性中。
+
+> XSL模板对象的3.0和6.0版本存在显著的差别。在3.0版本中，必须给input属性指定一个完整的文档；如果指定的是节点，就会导致错误。而在6.0版本中，则可以为input属性指定文档中的任何节点。
+
+XSLT样式表可以接受传入的参数，并将其用作局部变量。
+
+addParameter()方法接收两个参数：要设置的参数名称（与在`<xsl:param>`的name特性中指定的一样）和要指定的值（多数情况下是字符串，但也可以是数值或布尔值）。
+
+XSL处理器能够设置一种操作模式。在XSLT中，可以使用mode特性为模板定义一种模式。在定义了模式后，如果没有将`<xsl:apply-templates>`与匹配的mode特性一起使用，就不会运行该模板。
+
+setStartMode()方法只接受一个参数，即要为处理器设置的模式。与addParameter()一样，设置模式也必须在调用transform()之前进行。
+
+如果你打算使用同一个样式表进行多次转换，可以在每次转换之后重置处理器。调用reset()方法后，就会清除原先的输入和输出属性、启动模式及其他指定的参数。
+
+### 18.3.2 XSLTProcessor类型
+
+非IE实现：
+
+与IE的实现类似，第一步也是加载两个DOM文档，一个基于XML，另一个基于XSLT。
+
+然后，创建一个新XSLTProcessor对象，并使用importStylesheet()方法为其指定一个XSLT。
+
+最后一步就是执行转换。这一步有两种不同的方式，如果想返回一个完整的DOM文档，可以调用transformToDocument()。而通过调用transformToFragment()则可以得到一个文档片段对象。一般来说，使用transformToFragment()的唯一理由，就是你还想把返回的结果添加到另一个DOM文档中。
+
+在使用transformToDocument()时，只要传入XML DOM，就可以将结果作为一个完全不同的DOM文档来使用。
+
+transformToFragment()方法接收两个参数：要转换的XML DOM和应该拥有结果片段的文档。换句话说，如果你想将返回的片段插入到页面中，只要将document作为第二个参数即可。
+
+当输出格式为"text"时调用transformToDocument()，仍然会返回一个完整的XML文档，但这个文档的内容在不同浏览器中却不一样。使用transformToFragment()方法可以解决这个问题，这个方法返回的是只包含一个子节点的文档片段，而子节点中包含着结果文本。
+
+#### 1. 使用参数
+
+XSLTProcessor也支持使用setParameter()来设置XSLT的参数，这个方法接收三个参数：命名空间URI、参数的内部名称和要设置的值。通常，命名空间URI都是null，而内部名称就是参数的名称。另外，必须在调用transformToDocument()或transformToFragment()之前调用这个方法。
+
+还有两个不常用的与参数有关的方法，getParameter()和removeParameter()，分别用于取得和移除当前参数的值。这两个方法都要接受命名空间参数（同样，通常是null）和参数的内部名称。
+
+#### 2. 重置处理器
+
+重置处理器时要调用reset()方法，这个方法会从处理器中移除所有参数和样式表。然后，你就可以再次调用importStylesheet()，以加载不同的XSLT样式表
+
+### 18.3.3  跨浏览器使用XSLT
+
+跨浏览器兼容性最好的XSLT转换技术，只能是返回结果字符串。为此在IE中只需在上下文节点上调用transformNode()即可，而在其他浏览器中则需要序列化transformToDocument()操作的结果。
+
+## 18.4 小结
+
+IE采取了下列方式。
+
+- 通过ActiveX对象来支持处理XML，而相同的对象也可以用来构建桌面应用程序。
+- Windows携带了MSXML库，JavaScript能够访问这个库。
+- 这个库中包含对基本XML解析和序列化的支持，同时也支持XPath和XSLT等技术。
+
+Firefox为处理XML的解析和序列化，实现了两个新类型。
+
+- DOMParser类型比较简单，其对象可以将XML字符串解析为DOM文档。
+- XMLSerializer类型执行相反的操作，即将DOM文档序列化为XML字符串。
+
+DOM3级引入了一个针对XPath API的规范，该规范已经由Firefox、Safari、Chrome和Opera实现。这些API可以让JavaScript基于DOM文档运行任何XPath查询，并且能够返回任何数据的结果。IE以自己的方式实现了对XPath的支持；具体来说，就是两个方法：selectSingleNode()和selectNodes()。
+
+与XML相关的最后一种技术是XSLT，Firefox为通过JavaScript处理转换创建了XSLTProcessor类型；IE则针对XSLT提供了自己的方案，一个是简单的transformNode()方法，另一个是较为复杂的模板/处理器手段。
+
+
+
+# 第19章 E4X 
+
+E4X本身不是一门语言，它只是ECMAScript语言的可选扩展。
+
+尽管浏览器实现这个扩展标准的步伐非常缓慢，但Firefox 1.5及更高版本则支持几乎全部E4X标准。
+
+## 19.1 E4X的类型
+
+E4X定义了如下几个新的全局类型。
+
+- XML：XML结构中的任何一个独立的部分。
+- XMLList：XML对象的集合。
+- Namespace：命名空间前缀与命名空间URI之间的映射。
+- QName：由内部名称和命名空间URI组成的一个限定名。
+
+### 19.1.1 XML类型
+
+XML类型继承自Object类型，因此它也继承了所有对象默认的所有属性和方法。
+
+创建XML对象的方式
+
+```javascript
+//方式1
+var x = new XML(); 
+var x = new XML("<employee position=\"Software Engineer\"><name>Nicholas " + 
+"Zakas</name></employee>"); 
+//方式2
+var x = new XML(xmldom);
+//方式3
+var employee = <employee position="Software Engineer"> 
+<name>Nicholas C. Zakas</name> 
+</employee>; 
+```
+
+> Firefox对E4X的实现不支持解析XML的开头代码（prolog）。无论<?xml version="1.0" ?>出现在传递给XML构造函数的文本中，还是出现在XML字面量中，都会导致语法错误。
+
+XML类型的toXMLString()方法会返回XML对象及其子节点的XML字符串表示。
+
+XML类型的toString()方法则会基于不同XML对象的内容返回不同的字符串。如果内容简单（纯文本），则返回文本；否则，toString()方法与toXMLString()方法返回的字符串一样。
+
+### 19.1.2 XMLList类型
+
+显式地创建一个XMLList对象
+
+```javascript
+//方式1
+var list = new XMLList(); 
+//方式2
+var list = new XMLList("<item/><item/>"); 
+//方式3
+var list = <item/> + <item/> ;
+var list = <><item/><item/></>; 
+```
+
+可以使用方括号语法及位置来访问每个元素
+
+每个XMLList对象都有length()方法，用于返回对象中包含的元素数量。注意，length()是方法，不是属性。这一点是故意与数组和NodeList相区别的。
+
+E4X有意模糊XML和XMLList类型之间的区别，这一点很值得关注。为了减少两者之间的区别，每个XML对象也同样有一个length()方法和一个由[0]引用的属性（返回XML对象自身）。
+
+XMLList 对象的toString()和toXMLString()方法返回相同的字符串值，也就是将其包含的
+XML对象序列化之后再拼接起来的结果。
+
+### 19.1.3 Namespace类型
+
+通常，Namespace对象是用来映射命名空间前缀和命名空间URI的，不过有时候并不需要前缀。
+
+创建Namespace对象
+
+```javascript
+var ns = new Namespace();
+```
+
+传入URI或前缀加URI, 可以初始化Namespace对象
+
+```javascript
+var ns = new Namespace("http://www.wrox.com/"); 
+var wrox = new Namespace("wrox", "http://www.wrox.com/");
+```
+
+可使用prefix和uri属性来取得Namespace对象中的信息
+
+在没有给Namespace对象指定前缀的情况下，prefix属性会返回undefined。要想创建默认的命名空间，应该将前缀设置为空字符串。
+
+如果XML字面量中包含命名空间，或者通过XML构造函数解析的XML字符串中包含命名空间信息，那么就会自动创建Namespace对象。然后，就可以通过前缀和namespace()方法来取得对Namespace对象的引用。
+
+Namespace对象的toString()方法始终会返回命名空间URI。
+
+### 19.1.4 QName类型
+
+QName类型表现的是XML对象的限定名，即命名空间与内部名称的组合。向QName构造函数中传入名称或Namespace对象和名称，可以手工创建新的QName对象
+
+可以访问它的两个属性：uri和localName。其中，uri属性返回在创建对象时指定的命名空间的URI（如果未指定命名空间，则返回空字符串），而localName属性返回限定名中的内部名称
+
+这两个属性是只读的，如果你想修改它们的值，会导致错误发生。QName对象重写了toString()方法，会以uri::localName形式返回一个字符串
+
+在解析XML结构时，会为表示相应元素或特性的XML对象自动创建QName对象。
+
+使用setName()方法并传入一个新QName对象，可以修改XML对象的限定名
+
+## 19.2 一般用法
+
+在将XML对象、元素、特性和文本集合到一个层次化对象之后，就可以使用点号加特性或标签名的方式来访问其中不同的层次和结构。
+
+如果你不确定子元素的内部名称，或者你想访问所有子元素，不管其名称是什么，也可以像下面这样使用星号（*）。
+
+```javascript
+var allChildren = employees.*; //返回所有子元素，不管其名称是什么
+```
+
+child()方法。将属性名或索引值传递给child()方法，会得到相同的值。
+
+children()方法始终返回所有子元素。
+
+elements()的行为与child()类似，区别仅在于它只返回表示元素的XML对象。
+
+要删除子元素，可以使用delete操作符
+
+### 19.2.1 访问特性
+
+访问特性也可以使用点语法,为了区分特性名与子元素的标签名，必须在名称前面加上一个@字符。这是从XPath中借鉴的语法；XPath也是使用@来区分特性和标签的名称。
+
+要取得特性的名称，可以使用对象的name()方法。
+
+可使用child()方法来访问特性，只要传入带有@前缀的特性的名称即可。由于访问XML对象的属性时也可以使用child()，因此必须使用@字符来区分标签名和特性名。
+
+使用attribute()方法并传入特性名，可以只访问XML对象的特性。不需要传入带@字符的特性名。
+
+要取得XML或XMLList对象中的所有特性，可以使用attributes()方法。这个方法会返回一个表示所有特性的XMLList对象。使用这个方法与使用@*的结果相同
+
+在E4X中修改特性的值与修改属性的值一样非常简单，只要像下面这样为特性指定一个新值。也可以用来添加新特性
+
+修改的特性会在内部反映出来，换句话说，此后再序列化XML对象，就会使用新的特性值。
+
+由于特性与其他ECMAScript属性类似，因此也可以使用delete操作符来删除特性
+
+### 19.2.2 其他节点类型
+
+在默认情况上，E4X不会解析注释或处理指令，因此这些部分不会出现在最终的对象层次中。如果想让解析器解析这些部分，可以像下面这样设置XML构造函数的下列两个属性。
+
+```javascript
+XML.ignoreComments = false; 
+XML.ignoreProcessingInstructions = false; 
+```
+
+使用nodeKind()方法可以得到XML对象表示的类型，该访问可能会返回"text"、"element"、"comment"、"processing-instruction"或"attribute"。
+
+不能在包含多个XML对象的XMLList上调用nodeKind()方法；否则，会抛出一个错误。
+
+可以只取得特定类型的节点，而这就要用到下列方法。
+
+-  attributes()：返回XML对象的所有特性。
+- comments()：返回XML对象的所有子注释节点。
+- elements(tagName)：返回XML对象的所有子元素。可以通过提供元素的tagName（标签名）来过滤想要返回的结果。
+
+
+- processingInstructions(name)：返回XML对象的所有处理指令。可以通过提供处理指令的name（名称）来过滤想要返回的结果。
+
+
+- text()：返回XML对象的所有文本子节点。
+
+上述方法都返回一个包含适当XML对象的XMLList。
+
+使用hasSimpleContent()和hasComplexContent()方法，可以确定XML对象中是只包含文本，还是包含更复杂的内容。如果XML对象中只包含子文本节点，则前一个方法会返回true；如果XML对象的子节点中有任何非文本节点，则后一个方法返回true。
+
+### 19.2.3 查询
+
+引用不表现XML 结构中某一部分的属性仍然会返回XMLList；只不过这个XMLList中什么也不会包含。
+
+使用两个点，则可以进一步扩展查询的深度，查询到所有后代节点。要想取得特定标签的元素，需要将星号替换成实际的标签名
+
+```javascript
+var allDescendants = employees..*; //取得<employees/>的所有后代节点
+```
+
+同样的查询可以使用descendants()方法来完成。在不给这个方法传递参数的情况下，它会返回所有后代节点（与使用..*相同），而传递一个名称作为参数则可以限制结果。
+
+同样的查询可以取得所有后代元素中的所有特性
+
+除了访问后代元素之外，还可以指定查询的条件。
+
+```javascript
+var salespeople = employees.employee.(@position == "Salesperson"); 
+```
+
+同样的语法也可以用于修改XML结构中的某一部分。
+
+```javascript
+employees.employee.(@position == "Salesperson")[0].@position= "Senior Salesperson"; 
+```
+
+注意，圆括号中的表达式会返回一个包含结果的XMLList，而方括号返回其中的一项
+
+使用parent()方法能够在XML结构中上溯，这个方法会返回一个XML对象，表示当前XML对象的父元素。如果在XMLList上调用parent()方法，则会返回列表中所有对象的公共父元素。
+
+### 19.2.4 构建和操作XML 
+
+可以在字面量中嵌入JavaScript变量，语法是使用花括号（{}）。
+
+E4X也支持使用标准的JavaScript语法来构建完整的XML结构。
+
+- E4XappendChild(child)：将给定的child作为子节点添加到XMLList的末尾。
+- copy()：返回XML对象副本。
+- insertChildAfter(refNode, child)：将child作为子节点插入到XMLList中refNode的后面。
+- insertChildBefore(refNode, child)：将child作为子节点插入到XMLList中refNode的前面。
+- prependChild(child)：将给定的child作为子节点添加到XMLList的开始位置。
+- replace(propertyName, value)：用value值替换名为propertyName的属性，这个属性可能是一个元素，也可能是一个特性。
+- setChildren(children)：用children替换当前所有的子元素，children可以是XML对象，也可是XMLList对象。类似DOM的方法：
+
+### 19.2.5 解析和序列化
+
+与XML解析相关的设置有如下三个。
+
+- ignoreComments：表示解析器应该忽略标记中的注释。默认设置为true。
+- ignoreProcessingInstructions：表示解析器应该忽略标记中的处理指令。默认设置为true。
+- ignoreWhitespace：表示解析器应该忽略元素间的空格，而不是创建表现这些空格的文本节点。默认设置为true。
+
+与XML数据序列化相关的设置有如下两个。这两个设置将影响到toString()和toXMLString()的输出。
+
+- prettyIndent：表示在序列化XML时，每次缩进的空格数量。默认值为2。
+- prettyPrinting：表示应该以方便人类认读的方式输出XML，即每个元素重起一行，而且子元素都要缩进。默认设置为true。
+
+以上五个设置都保存在settings对象中，通过XML构造函数的settings()方法可以取得这个对象
+
+使用defaultSettings()方法则可以取得一个包含默认设置的对象
+
+### 19.2.6 命名空间
+
+使用namspace()方法可以取得与特定前缀对应的Namespace对象。而通过使用setNamespace()并传入Namespace对象，也可以为给定元素设置命名空间。
+
+如果只想添加一个命名空间声明，而不想改变元素，可以使用addNamespace()方法并传入Namespace对象
+
+调用removeNamespace()方法并传入Namespace对象，可以移除表示特定命名空间前缀和URI的命名空间声明；注意，必须传入丝毫不差的表示命名空间的Namespace对象。
+
+有两个方法可以返回与节点相关的Namespace 对象的数组：namespaceDeclarations()和
+inScopeNamespaces()。前者返回在给定节点上声明的所有命名空间的数组，后者返回位于给定节点作用域中（即包括在节点自身和祖先元素中声明的）所有命名空间的数组。
+
+使用双冒号（::）也可以基于Namespace对象来查询XML结构中具有特定命名空间的元素。注意，这里使用的是JavaScript变量，而不是命名空间前缀。
+
+可以为某个作用域中的所有XML对象设置默认命名空间。为此，要使用default xml namespace语句，并将一个Namespace对象或一个命名空间URI作为值赋给它。
+
+```javascript
+default xml namespace = "http://www.wrox.com/";
+```
+
+注：在局部作用域中设置默认命名空间并不会改变全局作用域中的默认XML命名空间
+
+## 19.3 其他变化
+
+E4X引入了for-each-in循环，以便迭代遍历每一个属性并返回属性的值
+
+虽然for-each-in循环是在E4X中定义的，但这个语句也可以用于常规的数组和对象
+
+对于数组，for-each-in循环会返回数组中的每一项。对于非XML对象，这个循环返回对象每个属性的值。
+
+E4X还添加了一个全局函数，名叫isXMLName()。这个函数接受一个字符串，并在这个字符串是元素或特性的有效内部名称的情况下返回true。在使用未知字符串构建XML数据结构时，这个函数可以为开发人员提供方便。
+
+E4X对标准ECMAScript的最后一个修改是typeof操作符。在对XML对象或XMLList对象使用这个操作符时，typeof返回字符串"xml"。但在对其他对象使用这个操作符时，返回的都是"object"
+
+## 19.4 全面启用E4X 
+
+Firefox在默认情况下只启用E4X中与其他代码能够相安无事的那些特性。要想完整地启用E4X，需要将`<script>`标签的type 特性设置为"text/javascript;e4x=1"
+
+## 19.5 小结
+
+E4X具有下列特征。
+
+- 与DOM不同，E4X只用一个类型来表示XML中的各种节点。
+- XML对象中封装了对所有节点都有用的数据和行为。为表现多个节点的集合，这个规范定义了XMLList类型。
+
+
+- 另外两个类型，Namespace和QName，分别表现命名空间和限定名。
+
+E4X还修改了标准了的ECMAScript语法
+
+- 使用两个点（..）表示要匹配所有后代元素，使用@字符表示应该返回一或多个特性。
+- 星号字符（*）是一个通配符，可以匹配任意类型的节点。
+- 所有这些查询都可以通过一组执行相同操作的方法来实现。
 
 
 
