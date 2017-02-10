@@ -412,7 +412,7 @@ PS：
 - 这4个操作符对任何值都适用，遵循下列规则
   -  在应用于一个包含有效数字字符的字符串时，先将其转换为数字值，再执行加减1的操作。字符串变量变成数值变量。
   -  在应用于一个不包含有效数字字符的字符串时，将变量的值设置为NaN
-                  字符串变量变成数值变量。
+                   字符串变量变成数值变量。
   -  在应用于布尔值false时，先将其转换为0再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于布尔值true时，先将其转换为1再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于浮点数值时，执行加减1的操作。
@@ -3164,17 +3164,1608 @@ isEqual()用于确定两个范围是否相等，inRange()用于确定一个范�
 
 
 
+
+# 第13章 事件
+
+IE8是最后一个仍然使用其专有事件系统的主要浏览器。
+
+## 13.1 事件流
+
+IE的事件流是事件冒泡流，而Netscape Communicator的事件流是事件捕获流。
+
+### 13.1.1 事件冒泡
+
+**IE的事件流叫做事件冒泡**，即事件开始时由最具体的元素（文档中嵌套层次最深的那个节点）接收，然后逐级向上传播到较为不具体的节点（文档）。
+
+所有现代浏览器都支持事件冒泡，但在具体实现上还是有一些差别。IE5.5 及更早版本中的事件冒泡会跳过`<html>`元素（从<body直接跳到document）。IE9、Firefox、Chrom和Safari则将事件一直冒泡到window对象。
+
+### 13.1.2 事件捕获
+
+Netscape Communicator提出事件捕获。事件捕获的思想是不太具体的节点应该更早接收到事件，而最具体的节点应该最后接收到事件。事件捕获的用意在于在事件到达预定目标之前捕获它。
+
+**建议使用事件冒泡，在有特殊需要时再使用事件捕获。**
+
+### 13.1.3 DOM事件流
+
+“DOM2级事件”规定的事件流包括三个阶段：事件捕获阶段、处于目标阶段和事件冒泡阶段。
+
+多数支持DOM事件流的浏览器都实现了一种特定的行为；即使“DOM2级事件”规范明确要求捕获阶段不会涉及事件目标，但IE9、Safari、Chrome、Firefox和Opera 9.5及更高版本都会在捕获阶段触发事件对象上的事件。结果，就是有两个机会在目标对象上面操作事件。
+
+> IE9、Opera、Firefox、Chrome和Safari都支持DOM事件流；IE8及更早版本不支持DOM事件流。
+
+## 13.2 事件处理程序
+
+### 13.2.1 HTML事件处理程序
+
+为了避免使用HTML实体，可以使用了单引号替代双引号。
+
+事件处理程序中的代码在执行时，有权访问全局作用域中的任何代码。
+
+事件处理程序会创建一个封装着元素属性值的函数。这个函数中有一个局部变量event，也就是事件对象，通过event变量，可以直接访问事件对象，你不用自己定义它，也不用从函数的参数列表中读取。
+在这个函数内部，this值等于事件的目标元素
+
+扩展作用域的方式：使用with
+
+```javascript
+function(){ 
+    with(document){ 
+        with(this){ 
+        	//元素属性值
+        } 
+    } 
+}
+```
+
+在HTML中指定事件处理程序有两个缺点：
+
+1. 存在一个时差问题。因为用户可能会在HTML元素一出现在页面上就触发相应的事件，但当时的事件处理程序有可能尚不具备执行条件。为此，很多HTML事件处理程序都会被封装在一个try-catch块中
+2. 扩展事件处理程序的作用域链在不同浏览器中会导致不同结果。不同JavaScript引擎遵循的标识符解析规则略有差异，很可能会在访问非限定对象成员时出错。
+3. HTML与JavaScript代码紧密耦合。
+
+### 13.2.2 DOM0级事件处理程序
+
+每个元素（包括window和document）都有自己的事件处理程序属性，这些属性通常全部小写
+
+使用DOM0级方法指定的事件处理程序被认为是元素的方法。因此，这时候的事件处理程序是在元素的作用域中运行；换句话说，程序中的this引用当前元素。
+
+删除通过DOM0级方法指定的事件处理程序，将事件处理程序属性的值设置为null即可
+
+### 13.2.3 DOM2级事件处理程序
+
+#### addEventListener()和removeEventListener()
+
+所有DOM节点中都包含这两个方法，并且它们都接受3个参数：要处理的事件名、作为事件处理程序的函数和一个布尔值。最后这个布尔值参数如果是true，表示在捕获阶段调用事件处理程序；如果是false，表示在冒泡阶段调用事件处理程序。
+
+使用DOM2级方法添加事件处理程序的主要好处是可以添加多个事件处理程序。会按照添加的顺序触发
+
+通过addEventListener()添加的事件处理程序只能使用removeEventListener()来移除；移除时传入的参数与添加处理程序时使用的参数相同。这也意味着通过addEventListener()添加的匿名函数将无法移除
+
+传入removeEventListener()中的事件处理程序函数必须与传入addEventListener()中的相同
+
+大多数情况下，都是将事件处理程序添加到事件流的冒泡阶段，这样可以最大限度地兼容各种浏览器。不建议在事件捕获阶段注册事件处理程序。
+
+> IE9、Firefox、Safari、Chrome和Opera支持DOM2级事件处理程序。
+
+### 13.2.4 IE事件处理程序
+
+attachEvent()和detachEvent()
+
+接受相同的两个参数：事件处理程序名称与事件处理程序函数。由于IE8 及更早版本只支持事件冒泡，所以通过attachEvent()添加的事件处理程序都会被添加到冒泡阶段。
+
+注意，attachEvent()的第一个参数是"onclick"，而非DOM的addEventListener()方法中的"click"。
+
+在IE中使用attachEvent()与使用DOM0级方法的主要区别在于事件处理程序的作用域。在使用DOM0级方法的情况下，事件处理程序会在其所属元素的作用域内运行；在使用attachEvent()方法的情况下，事件处理程序会在全局作用域中运行，因此this等于window。
+
+attachEvent()方法也可以用来为一个元素添加多个事件处理程序，不过，与DOM方法不同的是，这些事件处理程序不是以添加它们的顺序执行，而是以相反的顺序被触发。
+
+使用attachEvent()添加的事件可以通过detachEvent()来移除，条件是必须提供相同的参数。与DOM方法一样，这也意味着添加的匿名函数将不能被移除。不过，只要能够将对相同函数的引用传给detachEvent()，就可以移除相应的事件处理程序。
+
+> 支持IE事件处理程序的浏览器有IE和Opera。
+
+### 13.2.5 跨浏览器的事件处理程序
+
+第一个要创建的方法是addHandler()，它的职责是视情况分别使用DOM0级方法、DOM2级方法或IE方法来添加事件。这个方法属于一个名叫EventUtil的对象，本书将使用这个对象来处理浏览器间的差异。addHandler()方法接受3个参数：要操作的元素、事件名称和事件处理程序函数。
+
+removeHandler()，它也接受相同的参数。这个方法的职责是移除之前添加的事件处理程序——无论该事件处理程序是采取什么方式添加到元素中的，如果其他方法无效，默认采用DOM0级方法。
+
+addHandler()和removeHandler()没有考虑到所有的浏览器问题，例如在IE中的作用域问题。此外还要注意，DOM0级对每个事件只支持一个事件处理程序。
+
+## 13.3 事件对象
+
+### 13.3.1 DOM中的事件对象
+
+无论指定事件处理程序时使用什么方法（DOM0级或DOM2级），都会传入event对象。
+
+| 属性/方法                      | 类 型          | 读/写  | 说 明                                      |
+| -------------------------- | ------------ | ---- | ---------------------------------------- |
+| bubbles                    | Boolean      | 只读   | 表明事件是否冒泡                                 |
+| cancelable                 | Boolean      | 只读   | 表明是否可以取消事件的默认行为                          |
+| currentTarget              | Element      | 只读   | 其事件处理程序当前正在处理事件的那个元素                     |
+| defaultPrevented           | Boolean      | 只读   | 为true表示已经调用了preventDefault()（DOM3级事件中新增） |
+| detail                     | Integer      | 只读   | 与事件相关的细节信息                               |
+| eventPhase                 | Integer      | 只读   | 调用事件处理程序的阶段：1表示捕获阶段，2表示“处于目标”，3表示冒泡阶段    |
+| preventDefault()           | Function     | 只读   | 取消事件的默认行为。如果cancelable是true，则可以使用这个方法    |
+| stopImmediatePropagation() | Function     | 只读   | 取消事件的进一步捕获或冒泡，同时阻止任何事件处理程序被调用（DOM3级事件中新增） |
+| stopPropagation()          | Function     | 只读   | 取消事件的进一步捕获或冒泡。如果bubbles为true，则可以使用这个方法   |
+| target                     | Element      | 只读   | 事件的目标                                    |
+| trusted                    | Boolean      | 只读   | 为true表示事件是浏览器生成的。为false表示事件是由开发人员通过JavaScript创建的（DOM3级事件中新增） |
+| type                       | String       | 只读   | 被触发的事件的类型                                |
+| view                       | AbstractView | 只读   | 与事件关联的抽象视图。等同于发生事件的                      |
+
+在事件处理程序内部，对象this始终等于currentTarget的值，而target则只包含事件的实际目标。如果直接将事件处理程序指定给了目标元素，则this、currentTarget和target包含相同的值。如果事件处理程序存在于父节点中，那么这些值是不相同的。
+
+在需要通过一个函数处理多个事件时，可以使用type属性。
+
+事件对象的eventPhase属性，可以用来确定事件当前正位于事件流的哪个阶段。这里要注意的是，尽管“处于目标”发生在冒泡阶段，但eventPhase仍然一直等于2。
+
+```javascript
+var btn = document.getElementById("myBtn"); 
+btn.onclick = function(event){ 
+	alert(event.eventPhase); //2 
+}; 
+document.body.addEventListener("click", function(event){ 
+	alert(event.eventPhase); //1 
+}, true); 
+document.body.onclick = function(event){ 
+	alert(event.eventPhase); //3 
+}; 
+```
+
+> 只有在事件处理程序执行期间，event对象才会存在；一旦事件处理程序执行完成，event对象就会被销毁。
+
+### 13.3.2 IE中的事件对象
+
+在使用DOM0级方法添加事件处理程序时，event对象作为window对象的一个属性存在，可通过window.event取得了event对象。
+
+如果事件处理程序是使用attachEvent()添加的，也可以通过window对象来访问event对象
+
+如果是通过HTML特性指定的事件处理程序，那么还可以通过一个名叫event的变量来访问event对象
+
+IE的event对象同样也包含与创建它的事件相关的属性和方法。
+
+| 属性/方法        | 类 型     | 读/写  | 说 明                                      |
+| ------------ | ------- | ---- | ---------------------------------------- |
+| cancelBubble | Boolean | 读/写  | 默认值为false，但将其设置为true就可以取消事件冒泡（与DOM中的stopPropagation()方法的作用相同） |
+| returnValue  | Boolean | 读/写  | 默认值为true，但将其设置为false就可以取消事件的默认行为（与DOM中的preventDefault()方法的作用相同） |
+| srcElement   | Element | 只读   | 事件的目标（与DOM中的target属性相同）                  |
+| type         | String  | 只读   | 被触发的事件的类型                                |
+
+cancelBubble属性与DOM中的stopPropagation()方法作用相同，都是用来停止事件冒泡的。由于IE不支持事件捕获，因而只能取消事件冒泡；但stopPropagatioin()可以同时取消事件捕获和冒泡。
+
+### 13.3.3 跨浏览器的事件对象
+
+EventUtil添加了4个新方法第一个是getEvent()，它返回对event对象的引用。在使用这个方法时，必须假设有一个事件对象传入到事件处理程序中，而且要把该变量传给这个方法
+
+第二个方法是getTarget()，它返回事件的目标。在这个方法内部，会检测event对象的target属性，如果存在则返回该属性的值；否则，返回srcElement属性的值。
+
+第三个方法是preventDefault()，用于取消事件的默认行为。在传入event对象后，这个方法会检查是否存在preventDefault()方法，如果存在则调用该方法。如果preventDefault()方法存在，则将returnValue设置为false。
+
+第四个方法是stopPropagation()，其实现方式类似。首先尝试使用DOM方法阻止事件流，否则就使用cancelBubble属性。
+
+## 13.4 事件类型
+
+“DOM3级事件”规定了以下几类事件。
+
+- UI事件，当用户与页面上的元素交互时触发；
+- 焦点事件，当元素获得或失去焦点时触发；
+- 鼠标事件，当用户通过鼠标在页面上执行操作时触发；
+- 滚轮事件，当使用鼠标滚轮（或类似设备）时触发；
+- 文本事件，当在文档中输入文本时触发；
+- 键盘事件，当用户通过键盘在页面上执行操作时触发；
+- 合成事件，当为IME（Input Method Editor，输入法编辑器）输入字符时触发；
+- 变动（mutation）事件，当底层DOM结构发生变化时触发。
+- 变动名称事件，当元素或属性名变动时触发。此类事件已经被废弃，没有任何浏览器实现它们。
+
+### 13.4.1 UI事件
+
+现有的UI事件如下：
+
+- DOMActivate：表示元素已经被用户操作（通过鼠标或键盘）激活。这个事件在DOM3级事件中被废弃，但Firefox 2+和Chrome支持它。
+- load：当页面完全加载后在window上面触发，当所有框架都加载完毕时在框架集上面触发，当图像加载完毕时在`<img>`元素上面触发，或者当嵌入的内容加载完毕时在`<object>`元素上面触发。 
+- unload：当页面完全卸载后在window上面触发，当所有框架都卸载后在框架集上面触发，或者当嵌入的内容卸载完毕后在`<object>`元素上面触发。
+- abort：在用户停止下载过程时，如果嵌入的内容没有加载完，则在`<object>`元素上面触发。  
+- error：当发生JavaScript错误时在window上面触发，当无法加载图像时在`<img>`元素上面触发，当无法加载嵌入内容时在`<object>`元素上面触发，或者当有一或多个框架无法加载时在框架集上面触发。
+- select：当用户选择文本框（`<input>`或`<texterea>`）中的一或多个字符时触发。
+- resize：当窗口或框架的大小变化时在window或框架上面触发。
+- scroll：当用户滚动带滚动条的元素中的内容时，在该元素上面触发。`<body>`元素中包含所加载页面的滚动条。
+
+除了DOMActivate之外，其他事件在DOM2级事件中都归为HTML事件（DOMActivate在DOM2级中仍然属于UI事件）。要确定浏览器是否支持DOM2级事件规定的HTML事件，可以使用如下代码：
+
+```javascript
+var isSupported = document.implementation.hasFeature("HTMLEvents", "2.0"); 
+```
+
+要确定浏览器是否支持“DOM3级事件”定义的事件，可以使用如下代码：
+
+```javascript
+var isSupported = document.implementation.hasFeature("UIEvent", "3.0");
+```
+
+#### 1. load事件
+
+当页面完全加载后（包括所有图像、JavaScript文件、CSS文件等外部资源），就会触发window上面的load事件。
+
+有两种定义onload事件处理程序的方式。
+第一种方式是使用如下所示的JavaScript代码：
+
+```javascript
+EventUtil.addHandler(window, "load", function(event){ 
+	alert("Loaded!"); 
+});  
+```
+
+这个event对象中不包含有关这个事件的任何附加信息，但在兼容DOM的浏览器中，event.target 属性的值会被设置为document，而IE并不会为这个事件设置srcElement属性。
+
+第二种指定onload事件处理程序的方式是为<body>元素添加一个onload特性
+
+```html
+<!DOCTYPE html> 
+<html> 
+<head>
+	<title>Load Event Example</title> 
+</head> 
+<body onload="alert('Loaded!')"> 
+</body> 
+</html> 
+```
+
+建议尽可能使用JavaScript方式。
+
+> 根据“DOM2级事件”规范，应该在document而非window上面触发load事件。但是，所有浏览器都在window上面实现了该事件，以确保向后兼容。
+
+在创建新的`<img>`元素时，可以为其指定一个事件处理程序，以便图像加载完毕后给出提示。此时，最重要的是要在指定src属性之前先指定事件
+
+有一点需要格外注意：新图像元素不一定要从添加到文档后才开始下载，只要设置了src属性就会开始下载。
+
+> 在不属于DOM文档的图像（包括未添加到文档的`<img>`元素和Image对象）上触发load事件时，IE8及之前版本不会生成event对象。IE9修复了这个问题。
+
+在IE9+、Firefox、Opera、Chrome和Safari 3+及更高版本中，`<script>`元素也会触发load事件，以便开发人员确定动态加载的JavaScript文件是否加载完毕。与图像不同，只有在设置了`<script>`元素的src属性并将该元素添加到文档后，才会开始下载JavaScript文件。换句话说，对于`<script>`元素而言，指定src属性和指定事件处理程序的先后顺序就不重要了。 
+
+IE和Opera还支持`<link>`元素上的load事件，以便开发人员确定样式表是否加载完毕。与`<script>`节点类似，在未指定href属性并将`<link>`元素添加到文档之前也不会开始下载样式表。
+
+#### 2. unload事件
+
+这个事件在文档被完全卸载后触发。只要用户从一个页面切换到另一个页面，就会发生unload事件。而利用这个事件最多的情况是清除引用，以避免内存泄漏。
+
+有两种指定onunload事件处理程序的方式。
+第一种方式是使用JavaScript，如下所示：
+
+```javascript
+EventUtil.addHandler(window, "unload", function(event){ 
+	alert("Unloaded"); 
+}); 
+```
+
+此时生成的event对象在兼容DOM的浏览器中只包含target属性（值为document）。IE8及之
+前版本则为这个事件对象提供了srcElement属性。
+
+第二种方式，也是为`<body>`元素添加一个特性
+
+> 根据“DOM2级事件”，应该在`<body>`元素而非window对象上面触发unload事件。不过，所有浏览器都在window上实现了unload事件，以确保向后兼容。
+
+#### 3.resize事件
+
+当浏览器窗口被调整到一个新的高度或宽度时，就会触发resize事件。
+
+这个事件在window（窗口）上面触发，因此可以通过JavaScript或者`<body>`元素中的onresize特性来指定事件处理程序。
+
+推荐使用如下所示的JavaScript方式：
+
+```javascript
+EventUtil.addHandler(window, "resize", function(event){ 
+	alert("Resized"); 
+}); 
+```
+
+在兼容DOM的浏览器中，传入事件处理程序中的event对象有一个target属性，值为document；而IE8及之前版本则未提供任何属性。
+
+关于何时会触发resize事件，不同浏览器有不同的机制。IE、Safari、Chrome和Opera会在浏览器窗口变化了1像素时就触发resize事件，然后随着变化不断重复触发。Firefox则只会在用户停止调整窗口大小时才会触发resize事件。
+
+> 浏览器窗口最小化或最大化时也会触发resize事件。
+
+#### 4. scroll事件
+
+在混杂模式下，可以通过`<body>`元素的scrollLeft和scrollTop来监控到这一变化；而在标准模式下，
+除Safari之外的所有浏览器都会通过`<html>`元素来反映这一变化（Safari仍然基于`<body>`跟踪滚动位
+置）
+
+与resize事件类似，scroll事件也会在文档被滚动期间重复被触发，所以有必要尽量保持事件处理程序的代码简单。
+
+### 13.4.2 焦点事件
+
+利用焦点事件并与document.hasFocus()方法及document.activeElement属性配合，可以知晓用户在页面上的行踪。
+
+有以下6个焦点事件。
+
+- blur：在元素失去焦点时触发。这个事件不会冒泡；所有浏览器都支持它。
+- DOMFocusIn：在元素获得焦点时触发。这个事件与HTML事件focus等价，但它冒泡。只有Opera支持这个事件。DOM3级事件废弃了DOMFocusIn，选择了focusin。
+- DOMFocusOut：在元素失去焦点时触发。这个事件是HTML事件blur的通用版本。只有Opera支持这个事件。DOM3级事件废弃了DOMFocusOut，选择了focusout。
+- focus：在元素获得焦点时触发。这个事件不会冒泡；所有浏览器都支持它。
+- focusin：在元素获得焦点时触发。这个事件与HTML事件focus等价，但它冒泡。支持这个事件的浏览器有IE5.5+、Safari 5.1+、Opera 11.5+和Chrome。
+- focusout：在元素失去焦点时触发。这个事件是HTML事件blur的通用版本。支持这个事件的浏览器有IE5.5+、Safari 5.1+、Opera 11.5+和Chrome。
+
+当焦点从页面中的一个元素移动到另一个元素，会依次触发下列事件：
+
+- focusout在失去焦点的元素上触发；
+- focusin在获得焦点的元素上触发；
+- blur在失去焦点的元素上触发；
+- DOMFocusOut在失去焦点的元素上触发；
+- focus在获得焦点的元素上触发；
+- DOMFocusIn在获得焦点的元素上触发。
+
+要确定浏览器是否支持这些事件，可以使用如下代码：
+
+```javascript
+var isSupported = document.implementation.hasFeature("FocusEvent", "3.0"); 
+```
+
+> 即使focus和blur不冒泡，也可以在捕获阶段侦听到它们。
+
+### 13.4.3 鼠标与滚轮事件
+
+DOM3级事件中定义了9个鼠标事件，简介如下。
+
+- click：在用户单击主鼠标按钮（一般是左边的按钮）或者按下回车键时触发。这一点对确保易访问性很重要，意味着onclick事件处理程序既可以通过键盘也可以通过鼠标执行。
+- dblclick：在用户双击主鼠标按钮（一般是左边的按钮）时触发。从技术上说，这个事件并不是DOM2级事件规范中规定的，但鉴于它得到了广泛支持，所以DOM3级事件将其纳入了标准。
+- mousedown：在用户按下了任意鼠标按钮时触发。不能通过键盘触发这个事件。
+- mouseenter：在鼠标光标从元素外部首次移动到元素范围之内时触发。这个事件不冒泡，而且在光标移动到后代元素上不会触发。DOM2级事件并没有定义这个事件，但DOM3级事件将它纳入了规范。IE、Firefox 9+和Opera支持这个事件。
+- mouseleave：在位于元素上方的鼠标光标移动到元素范围之外时触发。这个事件不冒泡，而且在光标移动到后代元素上不会触发。DOM2级事件并没有定义这个事件，但DOM3级事件将它纳入了规范。IE、Firefox 9+和Opera支持这个事件。
+- mousemove：当鼠标指针在元素内部移动时重复地触发。不能通过键盘触发这个事件。
+- mouseout：在鼠标指针位于一个元素上方，然后用户将其移入另一个元素时触发。又移入的另一个元素可能位于前一个元素的外部，也可能是这个元素的子元素。不能通过键盘触发这个事件。
+- mouseover：在鼠标指针位于一个元素外部，然后用户将其首次移入另一个元素边界之内时触发。不能通过键盘触发这个事件。
+- mouseup：在用户释放鼠标按钮时触发。不能通过键盘触发这个事件。
+
+除了mouseenter和mouseleave，所有鼠标事件都会冒泡，也可以被取消，而取消鼠标事件将会影响浏览器的默认行为。
+
+只有在同一个元素上相继触发mousedown 和mouseup 事件，才会触发click 事件；如果mousedown或mouseup中的一个被取消，就不会触发click事件。类似地，只有触发两次click事件，才会触发一次dblclick事件。
+
+这4个事件触发的顺序始终如下：
+
+1. mousedown 
+2. mouseup 
+3. click 
+4. mousedown 
+5. mouseup 
+6. click 
+7. dblclick
+
+IE8及之前版本中的实现有一个小bug，因此在双击事件中，会跳过第二个mousedown和click事件
+
+使用以下代码可以检测浏览器是否支持以上DOM2级事件（除dbclick、mouseenter 和mouseleave之外）：
+
+```javascript
+var isSupported = document.implementation.hasFeature("MouseEvents", "2.0"); 
+```
+
+要检测浏览器是否支持上面的所有事件，可以使用以下代码：
+
+```javascript
+var isSupported = document.implementation.hasFeature("MouseEvent", "3.0") 
+```
+
+#### 1. 客户区坐标位置
+
+客户端位置信息保存在事件对象的clientX和clientY 属性中。所有浏览器都支持这两个属性，它们的值表示事件发生时鼠标指针在视口中的水平和垂直坐标。
+
+注意，这些值中不包括页面滚动的距离，因此这个位置并不表示鼠标在页面上的位置。
+
+#### 2. 页面坐标位置
+
+页面坐标通过事件对象的pageX和pageY属性，能告诉你事件是在页面中的什么位置发生的。换句话说，这两个属性表示鼠标光标在页面中的位置，因此坐标是从页面本身而非视口的左边和顶边计算的。
+
+在页面没有滚动的情况下，pageX和pageY的值与clientX和clientY的值相等。IE8及更早版本不支持事件对象上的页面坐标，不过使用客户区坐标和滚动信息可以计算出
+
+#### 3. 屏幕坐标位置
+
+鼠标事件发生时，不仅会有相对于浏览器窗口的位置，还有一个相对于整个电脑屏幕的位置。而通过screenX和screenY属性就可以确定鼠标事件发生时鼠标指针相对于整个屏幕的坐标信息。
+
+#### 4. 修改键
+
+这些修改键就是Shift、Ctrl、Alt和Meta（在Windows键盘中是Windows键，在苹果机中是Cmd键），它们经常被用来修改鼠标事件的行为。
+
+DOM为此规定了4个属性，表示这些修改键的状态：shiftKey、ctrlKey、altKey和metaKey。这些属性中包含的都是布尔值，如果相应的键被按下了，则值为true，否则值为false。当某个鼠标事件发生时，通过检测这几个属性就可以确定用户是否同时按下了其中的键。
+
+> IE9、Firefox、Safari、Chrome和Opera都支持这4个键。IE8及之前版本不支持metaKey属性。
+
+#### 5. 相关元素
+
+mouseover和mouserout事件都会涉及把鼠标指针从一个元素的边界之内移动到另一个元素的边界之内。对mouseover事件而言，事件的主目标是获得光标的元素，而相关元素就是那个失去光标的元素。类似地，对mouseout事件而言，事件的主目标是失去光标的元素，而相关元素则是获得光标的元素。
+
+DOM通过event对象的relatedTarget属性提供了相关元素的信息。这个属性只对于mouseover和mouseout事件才包含值；对于其他事件，这个属性的值是null。IE8及之前版本不支持relatedTarget属性，但提供了保存着同样信息的不同属性。在mouseover事件触发时，IE的fromElement属性中保存了相关元素；在mouseout事件触发时，IE的toElement属性中保存着相关元素。（IE9支持所有这些属性。） 
+
+#### 6. 鼠标按钮
+
+对于mousedown和mouseup事件来说，则在其event对象存在一个button属性，表示按下或释放的钮。
+
+DOM的button属性可能有如下3个值：0表示主鼠标按钮，1表示中间的鼠标按钮（鼠标滚轮按钮），2表示次鼠标按钮。
+
+IE8及之前版本也提供了button属性，但这个属性的值与DOM的button属性有很大差异。
+
+- 0：表示没有按下按钮。
+- 1：表示按下了主鼠标按钮。
+- 2：表示按下了次鼠标按钮。
+- 3：表示同时按下了主、次鼠标按钮。
+- 4：表示按下了中间的鼠标按钮。 
+- 5：表示同时按下了主鼠标按钮和中间的鼠标按钮。
+- 6：表示同时按下了次鼠标按钮和中间的鼠标按钮。
+- 7：表示同时按下了三个鼠标按钮。
+
+IE中返回的5和7会被转换成DOM模型中的0。
+
+通过检测"MouseEvents"这个特性，就可以确定event对象中存在的button属性中是否包含正确的值。如果测试失败，说明是IE，就必须对相应的值进行规范化。
+
+> 在使用onmouseup事件处理程序时，button的值表示释放的是哪个按钮。此外，如果不是按下或释放了主鼠标按钮，Opera不会触发mouseup 或mousedown 事件。
+
+#### 7. 更多的事件信息
+
+“DOM2级事件”规范在event对象中还提供了detail属性，用于给出有关事件的更多信息。对于鼠标事件来说，detail中包含了一个数值，表示在给定位置上发生了多少次单击。如果鼠标在mousedown和mouseup之间移动了位置，则detail会被重置为0。
+
+IE也通过下列属性为鼠标事件：
+
+- altLeft：布尔值，表示是否按下了Alt键。如果altLeft的值为true，则altKey的值也为true。
+- ctrlLeft：布尔值，表示是否按下了Ctrl键。如果ctrlLeft的值为true，则ctrlKey的值也为true。
+- offsetX：光标相对于目标元素边界的x坐标。
+- offsetY：光标相对于目标元素边界的y坐标。
+- shiftLeft：布尔值，表示是否按下了Shift键。如果shiftLeft的值为true，则shiftKey的值也为true。               
+
+#### 8. 鼠标滚轮事件
+
+当用户通过鼠标滚轮与页面交互、在垂直方向上滚动页面时（无论向上还是向下），就会触发mousewheel事件。这个事件可以在任何元素上面触发，最终会冒泡到document（IE8）或window（IE9、Opera、Chrome及Safari）对象。
+
+与mousewheel事件对应的event对象除包含鼠标事件的所有标准信息外，还包含一个特殊的wheelDelta属性。当用户向前滚动鼠标滚轮时，wheelDelta是120的倍数；当用户向后滚动鼠标滚轮时，wheelDelta是-120的倍数。
+
+注意：在Opera 9.5之前的版本中，wheelDelta值的正负号是颠倒的。
+
+> 由于mousewheel事件非常流行，而且所有浏览器都支持它，所以HTML 5也加入了该事件。
+
+Firefox支持一个名为DOMMouseScroll的类似事件，也是在鼠标滚轮滚动时触发。包含与鼠标事件有关的所有属性。有关鼠标滚轮的信息则保存在detail属性中，当向前滚动鼠标滚轮时，这个属性的值是-3的倍数，当向后滚动鼠标滚轮时，这个属性的值是3的倍数。可以将DOMMouseScroll事件添加到页面中的任何元素，而且该事件会冒泡到window对象。
+
+#### 9. 触摸设备
+
+ 面向触摸设备，要记住以下几点。
+
+- 不支持dblclick事件。双击浏览器窗口会放大画面，而且没有办法改变该行为。
+- 轻击可单击元素会触发mousemove事件。如果此操作会导致内容变化，将不再有其他事件发生；如果屏幕没有因此变化，那么会依次发生mousedown、mouseup和click事件。轻击不可单击的元素不会触发任何事件。可单击的元素是指那些单击可产生默认操作的元素（如链接），或者那些已经被指定了onclick事件处理程序的元素。
+- mousemove事件也会触发mouseover和mouseout事件。
+- 两个手指放在屏幕上且页面随手指移动而滚动时会触发mousewheel和scroll事件。
+
+#### 10. 无障碍性问题
+
+不建议使用click之外的其他鼠标事件来展示功能或引发代码执行。因为这样会给盲人或视障用户造成极大不便。以下是在使用鼠标事件时应当注意的几个易访问性问题。
+
+- 使用click事件执行代码。有人指出通过onmousedown执行代码会让人觉得速度更快，对视力正常的人来说这是没错的。但是，在屏幕阅读器中，由于无法触发mousedown事件，结果就会造成代码无法执行。
+- 不要使用onmouseover向用户显示新的选项。原因同上，屏幕阅读器无法触发这个事件。如果确实非要通过这种方式来显示新选项，可以考虑添加显示相同信息的键盘快捷方式。
+- 不要使用dblclick执行重要的操作。键盘无法触发这个事件。
+
+### 13.4.4 键盘与文本事件
+
+对键盘事件的支持主要遵循的是DOM0级。“DOM3级事件”为键盘事件制定了规范，IE9率先完全实现了该规范。其他浏览器也在着手实现这一标准，但仍然有很多遗留的问题。
+
+ 有3个键盘事件：
+
+- keydown：当用户按下键盘上的任意键时触发，而且如果按住不放的话，会重复触发此事件。
+- keypress：当用户按下键盘上的字符键时触发，而且如果按住不放的话，会重复触发此事件。按下Esc键也会触发这个事件。Safari 3.1之前的版本也会在用户按下非字符键时触发keypress事件。
+
+
+- keyup：当用户释放键盘上的键时触发。
+
+只有一个文本事件：textInput。这个事件是对keypress的补充，用意是在将文本显示给用户之前更容易拦截文本。在文本插入文本框之前会触发textInput事件。
+
+> 键盘事件与鼠标事件一样，都支持相同的修改键。而且，键盘事件的事件对象中也有shiftKey、ctrlKey、altKey和metaKey属性。IE不支持metaKey。
+
+#### 1. 键码
+
+在发生keydown和keyup事件时，event对象的keyCode属性中会包含一个代码，与键盘上一个特定的键对应。对数字字母字符键，keyCode属性的值与ASCII码中对应小写字母或数字的编码相同。因此，数字键7的keyCode值为55，而字母A键的keyCode值为65——与Shift键的状态无关。DOM和IE的event对象都支持keyCode属性。
+
+所有非字符键的键码：
+
+| 键                     | 键 码  | 键            | 键 码  |
+| --------------------- | ---- | ------------ | ---- |
+| 退格（Backspace）         | 8    | 数字小键盘1       | 97   |
+| 制表（Tab）               | 9    | 数字小键盘2       | 98   |
+| 回车（Enter）             | 13   | 数字小键盘3       | 99   |
+| 上档（Shift）             | 16   | 数字小键盘4       | 100  |
+| 控制（Ctrl）              | 17   | 数字小键盘5       | 101  |
+| Alt                   | 18   | 数字小键盘6       | 102  |
+| 暂停/中断（Pause/Break）    | 19   | 数字小键盘7       | 103  |
+| 大写锁定（Caps Lock）       | 20   | 数字小键盘8       | 104  |
+| 退出（Esc）               | 27   | 数字小键盘9       | 105  |
+| 上翻页（Page Up）          | 33   | 数字小键盘+       | 107  |
+| 下翻页（Page Down）        | 34   | 数字小键盘及大键盘上的- | 109  |
+| 结尾（End）               | 35   | 数字小键盘 .      | 110  |
+| 开头（Home）              | 36   | 数字小键盘/       | 111  |
+| 左箭头（Left Arrow）       | 37   | F1           | 112  |
+| 上箭头（Up Arrow）         | 38   | F2           | 113  |
+| 右箭头（Right Arrow）      | 39   | F3           | 114  |
+| 下箭头（Down Arrow）       | 40   | F4           | 115  |
+| 插入（Ins）               | 45   | F5           | 116  |
+| 删除（Del）               | 46   | F6           | 117  |
+| 左Windows键             | 91   | F7           | 118  |
+| 右Windows键             | 92   | F8           | 119  |
+| 上下文菜单键                | 93   | F9           | 120  |
+| 数字小键盘0                | 96   | F10          | 121  |
+| F11                   | 122  | 正斜杠          | 191  |
+| F12                   | 123  | 沉音符（`）       | 192  |
+| 数字锁（Num Lock）         | 144  | 等于           | 61   |
+| 滚动锁（Scroll Lock）      | 145  | 左方括号         | 219  |
+| 分号（IE/Safari/Chrome中） | 186  | 反斜杠（\）       | 220  |
+| 分号（Opera/FF中）         | 59   | 右方括号         | 221  |
+| 小于                    | 188  | 单引号          | 222  |
+| 大于                    | 190  |              |      |
+
+特殊情况：在Firefox和Opera中，按分号键时keyCode值为59，也就是ASCII中分号的编码；但IE和Safari返回186，即键盘中按键的键码。
+
+#### 2. 字符编码
+
+IE9、Firefox、Chrome和Safari的event对象都支持一个charCode属性，这个属性只有在发生keypress事件时才包含值，而且这个值是按下的那个键所代表字符的ASCII编码。此时的keyCode通常等于0或者也可能等于所按键的键码。IE8及之前版本和Opera则是在keyCode中保存字符的ASCII编码。
+
+在取得了字符编码之后，就可以使用String.fromCharCode()将其转换成实际的字符。
+
+#### 3. DOM3级变化
+
+DOM3级事件中的键盘事件，不再包含charCode属性，而是包含两个新属性：key和char。
+
+key属性是为了取代keyCode而新增的，它的值是一个字符串。在按下某个字符键时，key的值就是相应的文本字符（如“k”或“M”）；在按下非字符键时， key的值是相应键的名（如“Shift”或“Down”）。而char属性在按下字符键时的行为与key相同，但在按下非字符键时值为null。
+
+IE9支持key属性，但不支持char属性。Safari 5和Chrome支持名为keyIdentifier的属性，在按下非字符键（例如Shift）的情况下与key的值相同。对于字符键，keyIdentifier返回一个格式类似“U+0000”的字符串，表示Unicode值。
+
+由于存在跨浏览器问题，因此本书不推荐使用key、keyIdentifier或char。
+
+DOM3级事件还添加了一个名为location的属性，这是一个数值，表示按下了什么位置上的键：0表示默认键盘，1表示左侧位置（例如左位的Alt键），2表示右侧位置（例如右侧的Shift键），3表示数字小键盘，4表示移动设备键盘（也就是虚拟键盘），5表示手柄（如任天堂Wii控制器）。IE9支持这个属性。Safari和Chrome支持名为keyLocation的等价属性，但即有bug——值始终是0，除非按下了数字键盘（此时，值 为3）；否则，不会是1、2、4、5。 
+
+支持location的浏览器也不多。不推荐使用。
+
+最后是给event对象添加了getModifierState()方法。这个方法接收一个参数，即等于Shift、Control、AltGraph或Meta的字符串，表示要检测的修改键。如果指定的修改键是活动的（也就是处于被按下的状态），这个方法返回true，否则返回false。IE9是唯一支持getModifierState()方法的浏览器。
+
+#### 4. textInput事件
+
+“DOM3级事件”规范中引入textInput
+
+当用户在可编辑区域中输入字符时，就会触发这个事件。这个用于替代keypress的textInput事件的行为稍有不同。区别之一就是任何可以获得焦点的元素都可以触发keypress事件，但只有可编辑区域才能触发textInput事件。区别之二是textInput事件只会在用户按下能够输入实际字符的键时才会被触发，而keypress事件则在按下那些能够影响文本显示的键时也会触发（例如退格键）。
+
+它的event对象中还包含一个data属性，这个属性的值就是用户输入的字符（而非字符编码）（能区分大小写）。
+
+event对象上还有一个属性，叫inputMethod，表示把文本输入到文本框中的方式。
+
+- 0，表示浏览器不确定是怎么输入的。
+- 1，表示是使用键盘输入的。
+- 2，表示文本是粘贴进来的。
+- 3，表示文本是拖放进来的。
+- 4，表示文本是使用IME输入的。
+- 5，表示文本是通过在表单中选择某一项输入的。
+- 6，表示文本是通过手写输入的（比如使用手写笔）。
+- 7，表示文本是通过语音输入的。
+- 8，表示文本是通过几种方法组合输入的。
+- 9，表示文本是通过脚本输入的。
+
+支持textInput属性的浏览器有IE9+、Safari和Chrome。只有IE支持inputMethod属性。
+
+#### 5. 设备中的键盘事件
+
+### 13.4.5 复合事件
+
+DOM3级事件中新添加，用于处理IME 的输入序列。IME（Input Method Editor，输入法编辑器）可以让用户输入在物理键盘上找不到的字符。ME通常需要同时按住多个键，但最终只输入一个字符。复合事件就是针对检测和处理这种输入而设计的。有以下三种复合事件。
+
+- compositionstart：在IME的文本复合系统打开时触发，表示要开始输入了。
+- compositionupdate：在向输入字段中插入新字符时触发。
+- compositionend：在IME的文本复合系统关闭时触发，表示返回正常键盘输入状态。
+
+复合事件比文本事件的事件对象多一个属性data，其中包含以下几个值中的一个：
+
+- 如果在compositionstart事件发生时访问，包含正在编辑的文本（例如，已经选中的需要马上替换的文本）；
+- 如果在compositionupdate事件发生时访问，包含正插入的新字符；
+- 如果在compositionend事件发生时访问，包含此次输入会话中插入的所有字符。
+
+IE9+是到2011年唯一支持复合事件的浏览器。
+
+要确定浏览器是否支持复合事件，可以使用以下代码：
+
+```javascript
+var isSupported = document.implementation.hasFeature("CompositionEvent", "3.0"); 
+```
+
+### 13.4.6 变动事件
+
+DOM2级的变动（mutation）事件能在DOM中的某一部分发生变化时给出提示。
+
+DOM2级定义了如下变动事件。
+
+- DOMSubtreeModified：在DOM结构中发生任何变化时触发。这个事件在其他任何事件触发后都会触发。
+- DOMNodeInserted：在一个节点作为子节点被插入到另一个节点中时触发。
+- DOMNodeRemoved：在节点从其父节点中被移除时触发。
+- DOMNodeInsertedIntoDocument：在一个节点被直接插入文档或通过子树间接插入文档之后触发。这个事件在DOMNodeInserted之后触发。
+- DOMNodeRemovedFromDocument：在一个节点被直接从文档中移除或通过子树间接从文档中移除之前触发。这个事件在DOMNodeRemoved之后触发。
+- DOMAttrModified：在特性被修改之后触发。
+- DOMCharacterDataModified：在文本节点的值发生变化时触发。
+
+使用下列代码可以检测出浏览器是否支持变动事件：
+
+```javascript
+var isSupported = document.implementation.hasFeature("MutationEvents", "2.0"); 
+```
+
+IE8及更早版本不支持任何变动事件。下表列出了不同浏览器对不同变动事件的支持情况。
+
+| 事 件                | Opera 9+ | Firefox 3+ | Safari 3+及Chrome | IE9+ |
+| ------------------ | -------- | ---------- | ---------------- | ---- |
+| DOMSubtreeModified | －        | 支持         | 支持               | 支持   |
+| DOMNodeInserted    | 支持       | 支持         | 支持               | 支持   |
+| DOMNodeRemoved     | 支持       | 支持         | 支持               | 支持   |
+
+#### 1. 删除节点
+
+在使用removeChild()或replaceChild()从DOM中删除节点时，首先会触发DOMNodeRemoved事件。这个事件的目标（event.target）是被删除的节点，而event.relatedNode属性中包含着对目标节点父节点的引用。
+
+如果被移除的节点包含子节点，那么在其所有子节点以及这个被移除的节点上会相继触发DOMNodeRemovedFromDocument事件。但这个事件不会冒泡
+
+紧随其后触发的是DOMSubtreeModified事件。这个事件的目标是被移除节点的父节点；此时的event对象也不会提供与事件相关的其他信息。
+
+#### 2. 插入节点
+
+在使用appendChild()、replaceChild()或insertBefore()向DOM中插入节点时，首先会触发DOMNodeInserted事件。这个事件的目标是被插入的节点，而event.relatedNode属性中包含一个对父节点的引用。在这个事件触发时，节点已经被插入到了新的父节点中。这个事件是冒泡的。
+
+紧接着，会在新插入的节点上面触发DOMNodeInsertedIntoDocument事件。这个事件不冒泡，因此必须在插入节点之前为它添加这个事件处理程序。这个事件的目标是被插入的节点，除此之外event对象中不包含其他信息。
+
+最后一个触发的事件是DOMSubtreeModified，触发于新插入节点的父节点。
+
+### 13.4.7 HTML5事件
+
+#### 1. contextmenu事件
+
+上下文菜单：即通过单击鼠标右键可以调出上下文菜单。
+
+contextmenu事件，用以表示何时应该显示上下文菜单，以便开发人员取消默认的上下文菜单而提供自定义的菜单。
+
+contextmenu事件是冒泡的。
+
+这个事件的目标是发生用户操作的元素。
+
+在所有浏览器中都可以取消这个事件：
+在兼容DOM的浏览器中，使用event.preventDefalut()；在IE中，将event.returnValue的值
+设置为false。
+
+ 因为contextmenu事件属于鼠标事件，所以其事件对象中包含与光标位置有关的所有属性。
+
+通常使用contextmenu事件来显示自定义的上下文菜单，而使用onclick事件处理程序来隐藏该菜单。
+
+支持contextmenu事件的浏览器有IE、Firefox、Safari、Chrome和Opera 11+。
+
+#### 2.beforeunload事件
+
+beforeunload事件是为了让开发人员有可能在页面卸载前阻止这一操作。
+
+显示的消息会告知用户页面行将被卸载，询问用户是否真的要关闭页面，还是希望继续留下来
+
+为了显示这个弹出对话框，必须将event.returnValue 的值设置为要显示给用户的字符串（对IE及Fiefox而言），同时作为函数的值返回（对Safari和Chrome而言）
+
+IE和Firefox、Safari和Chrome都支持beforeunload事件，也都会弹出这个对话框询问用户是否真想离开。Opera 11及之前的版本不支持beforeunload事件。
+
+#### 3. DOMContentLoaded事件
+
+DOMContentLoaded事件则在形成完整的DOM树之后就会触发，不理会图像、JavaScript 文件、CSS文件或其他资源是否已经下载完毕。
+
+与load 事件不同，DOMContentLoaded 支持在页面下载的早期添加事件处理程序
+
+要处理DOMContentLoaded事件，可以为document或window添加相应的事件处理程序
+
+DOMContentLoaded事件对象不会提供任何额外的信息（其target属性是document）。
+
+IE9+、Firefox、Chrome、Safari 3.1+和Opera 9+都支持DOMContentLoaded事件，通常这个事件既可以添加事件处理程序，也可以执行其他DOM操作。
+
+这个事件始终都会在load事件之前触发。对于不支持DOMContentLoaded的浏览器，我们建议在页面加载期间设置一个时间为0毫秒的超时调用，实际意思就是：“在当前JavaScript处理完成后立即运行这个函数。”
+
+#### 4. readystatechange事件
+
+readystatechange事件目的是提供与文档或元素的加载状态有关的信息
+
+支持readystatechange事件的每个对象都有一个readyState属性，可能包含下列5个值中的一个。
+
+- uninitialized（未初始化）：对象存在但尚未初始化。
+- loading（正在加载）：对象正在加载数据。
+- loaded（加载完毕）：对象加载数据完成。
+- interactive（交互）：可以操作对象了，但还没有完全加载。
+- complete（完成）：对象已经加载完毕。
+
+这个事件的event对象不会提供任何信息，也没有目标对象。
+
+在与load事件一起使用时，无法预测两个事件触发的先后顺序。在包含较多或较大的外部资源的页面中，会在load事件触发之前先进入交互阶段；而在包含较少或较小的外部资源的页面中，则很难说readystatechange 事件会发生在load事件前面。
+
+交互阶段可能会早于也可能会晚于完成阶段出现，无法确保顺序。在包含较多外部资源的页面中，交互阶段更有可能早于完成阶段出现；而在页面中包含较少外部资源的情况下， 完成阶段先于交互阶段出现的可能性更大。因此，为了尽可能抢到先机，有必要同时检测交互和完成阶段
+
+支持readystatechange事件的浏览器有IE、Firfox 4+和Opera。
+
+`<script>`（在IE和Opera中）和`<link>`（仅IE中）元素也会触发readystatechange事件，可以用来确定外部的JavaScript和CSS文件是否已经加载完成。基于元素触发的readystatechange 事件也存在同样的问题，即readyState 属性无论等于"loaded"还是"complete"都可以表示资源已经可用。有时候，readyState会停在"loaded"阶段而永远不会“完成”；有时候，又会跳过"loaded"阶段而直接“完成”。于是，还需要像对待document一样采取相同的编码方式。最重要的是要一并检测readyState的两个状态，并在调用了一次事件处理程序后就将其移除。
+
+#### 5. pageshow和pagehide事件
+
+Firefox和Opera有一个特性，名叫“往返缓存”（back-forward cache，或bfcache），可以在用户使用浏览器的“后退”和“前进”按钮时加快页面的转换速度。
+
+这个缓存中不仅保存着页面数据，还保存了DOM和JavaScript的状态；实际上是将整个页面都保存在了内存里。如果页面位于bfcache中，那么再次打开该页面时就不会触发load事件。
+
+Firefox提供了一些新事件给bfcache的行为：
+
+第一个事件就是pageshow，这个事件在页面显示时触发，无论该页面是否来自bfcache。在重新加载的页面中，pageshow会在load事件触发后触发；而对于bfcache中的页面，pageshow会在页面状态完全恢复的那一刻触发。
+
+注意的是，虽然这个事件的目标是document，但必须将其事件处理程序添加到window。
+
+pageshow事件的event对象还包含一个名为persisted的布尔值属性。如果页面被保存在了bfcache中，则这个属性的值为true；否则，这个属性的值为false。
+
+与pageshow事件对应的是pagehide事件，该事件会在浏览器卸载页面的时候触发，而且是在unload事件之前触发。与pageshow事件一样，pagehide在document上面触发，但其事件处理程序必须要添加到window对象。
+
+对于pageshow事件，如果页面是从bfcache中加载的，那么persisted的值就是true；对于pagehide事件，如果页面在卸载之后会被保存在bfcache中，那么persisted的值也会被设置为true。
+
+支持pageshow和pagehide事件的浏览器有Firefox、Safari 5+、Chrome和Opera。IE9及之前版本不支持这两个事件。
+
+> 指定了onunload事件处理程序的页面会被自动排除在bfcache之外，即使事件处理程序是空的。原因在于，onunload最常用于撤销在onload中所执行的操作，而跳过onload后再次显示页面很可能就会导致页面不正常
+
+#### 6. hashchange事件
+
+HTML5新增了hashchange事件，以便在URL的参数列表（及URL中“#”号后面的所有字符串）发生变化时通知开发人员。之所以新增这个事件，是因为在Ajax应用中，开发人员经常要利用URL参数列表来保存状态或导航信息。
+
+hashchange事件处理程序添加给window对象，然后URL参数列表只要变化就会调用它。此时的event对象应该额外包含两个属性：oldURL和newURL。这两个属性分别保存着参数列表变化前后的完整URL。
+
+支持hashchange事件的浏览器有IE8+、Firefox 3.6+、Safari 5+、Chrome和Opera 10.6+。在这些浏览器中，只有Firefox 6+、Chrome和Opera支持oldURL和newURL属性。为此，最好是使用location对象来确定当前的参数列表。
+
+使用以下代码可以检测浏览器是否支持hashchange事件：
+
+```javascript
+var isSupported = ("onhashchange" in window) && (document.documentMode === 
+undefined || document.documentMode > 7); 
+//如果IE8是在IE7文档模式下运行，即使功能无效它也会返回true。所以要做兼容性
+```
+
+### 13.4.8 设备事件
+
+#### 1. orientationchange事件
+
+orientationchange事件用于确定用户何时将设备由横向查看模式切换为纵向查看模式。
+
+移动Safari的window.orientation属性中可能包含3个值：0表示肖像模式，90表示向左旋转的横向模式（“主屏幕”按钮在右侧），-90表示向右旋转的横向模式（“主屏幕”按钮在左侧）。相关文档中还提到一个值，即180表示iPhone头朝下；但这种模式至今尚未得到支持。
+
+所有iOS设备都支持orientationchange事件和window.orientation属性。
+
+> 由于可以将orientationchange 看成window 事件，所以也可以通过指定`<body>`元素的onorientationchange特性来指定事件处理程序。
+
+#### 2. MozOrientation事件
+
+Firefox 3.6为检测设备的方向引入了一个名为MozOrientation的新事件。（前缀Moz表示这是特定于浏览器开发商的事件，不是标准事件。）当设备的加速计检测到设备方向改变时，就会触发这个事件。该事件只能提供一个平面的方向变化。
+
+```javascript
+EventUtil.addHandler(window, "MozOrientation", function(event){ 
+	//响应事件
+}); 
+```
+
+此时的event对象包含三个属性：x、y和z。这几个属性的值都介于1到-1之间，表示不同坐标轴上的方向。在静止状态下，x值为0，y值为0，z值为1（表示设备处于竖直状态）。如果设备向右倾斜，x值会减小；反之，向左倾斜，x值会增大。类似地，如果设备向远离用户的方向倾斜，y值会减小，向接近用户的方向倾斜，y值会增大。z轴检测垂直加速度度，1表示静止不动，在设备移动时值会减小。（失重状态下值为0。）
+
+只有带加速计的设备才支持MozOrientation事件
+
+#### 3. deviceorientation事件
+
+deviceorientation事件的意图是告诉开发人员设备在空间中朝向哪儿，而不是如何移动。
+
+触发deviceorientation事件时，事件对象中包含着每个轴相对于设备静止状态下发生变化的信息。事件对象包含以下5个属性。
+
+- alpha：在围绕z轴旋转时（即左右旋转时），y轴的度数差；是一个介于0到360之间的浮点数。
+- beta：在 围 绕x轴旋转时（即前后旋转时），z轴的度数差；是一个介于180到180之间的浮点数。
+- gamma：在围绕y轴旋转时（即扭转设备时），z轴的度数差；是一个介于90到90之间的浮点数。
+- absolute：布尔值，表示设备是否返回一个绝对值。
+- compassCalibrated：布尔值，表示设备的指南针是否校准过。
+
+支持deviceorientation事件的浏览器有iOS 4.2+中的Safari、Chrome和Android版WebKit。
+
+#### 4. devicemotion事件
+
+DeviceOrientation Event规范还定义了一个devicemotion事件。这个事件是要告诉开发人员设备什么时候移动，而不仅仅是设备方向如何改变。
+
+触发devicemotion事件时，事件对象包含以下属性。
+
+- acceleration：一个包含x、y和z属性的对象，在不考虑重力的情况下，告诉你在每个方向上的加速度。
+
+
+- accelerationIncludingGravity：一个包含x、y和z属性的对象，在考虑z轴自然重力加速度的情况下，告诉你在每个方向上的加速度。
+
+
+- interval：以毫秒表示的时间值，必须在另一个devicemotion事件触发前传入。这个值在每个事件中应该是一个常量。
+
+
+- rotationRate：一个包含表示方向的alpha、beta和gamma属性的对象。
+
+只有iOS 4.2+中的Safari、Chrome和Android版WebKit实现了devicemotion事件。
+
+### 13.4.9 触摸与手势事件
+
+#### 1. 触摸事件
+
+有以下几个触摸事件。
+
+- touchstart：当手指触摸屏幕时触发；即使已经有一个手指放在了屏幕上也会触发。
+- touchmove：当手指在屏幕上滑动时连续地触发。在这个事件发生期间，调用preventDefault()可以阻止滚动。
+
+
+- touchend：当手指从屏幕上移开时触发。
+- touchcancel：当系统停止跟踪触摸时触发。关于此事件的确切触发时间，文档中没有明确说明。
+
+上面这几个事件都会冒泡，也都可以取消。虽然这些触摸事件没有在DOM规范中定义，但它们却
+是以兼容DOM的方式实现的。因此，每个触摸事件的event对象都提供了在鼠标事件中常见的属性：bubbles、cancelable、view、clientX、clientY、screenX、screenY、detail、altKey、shiftKey、ctrlKey和metaKey。
+
+触摸事件还包含下列三个用于跟踪触摸的属性。
+
+- touches：表示当前跟踪的触摸操作的Touch对象的数组。
+- targetTouchs：特定于事件目标的Touch对象的数组。
+- changeTouches：表示自上次触摸以来发生了什么改变的Touch对象的数组。
+
+每个Touch对象包含下列属性。
+
+- clientX：触摸目标在视口中的x坐标。
+- clientY：触摸目标在视口中的y坐标。
+- identifier：标识触摸的唯一ID。
+- pageX：触摸目标在页面中的x坐标。
+- pageY：触摸目标在页面中的y坐标。
+- screenX：触摸目标在屏幕中的x坐标。
+- screenY：触摸目标在屏幕中的y坐标。
+- target：触摸的DOM节点目标。
+
+在触摸屏幕上的元素时，这些事件（包括鼠标事件）发生的顺序如下：
+
+1. touchstart 
+2. mouseover 
+3. mousemove（一次）
+4. mousedown 
+5. mouseup 
+6. click 
+7. touchend 
+
+支持触摸事件的浏览器包括iOS版Safari、Android版WebKit、bada版Dolfin、OS6+中的BlackBerry WebKit、Opera Mobile 10.1+和LG专有OS中的Phantom浏览器。目前只有iOS版Safari支持多点触摸。桌面版Firefox 6+和Chrome也支持触摸事件。
+
+#### 2. 手势事件
+
+有三个手势事件
+
+- gesturestart：当一个手指已经按在屏幕上而另一个手指又触摸屏幕时触发。
+- gesturechange：当触摸屏幕的任何一个手指的位置发生变化时触发。
+- gestureend：当任何一个手指从屏幕上面移开时触发。
+
+每个手势事件的event 对象都包含着标准的鼠标事件属性：bubbles、cancelable、view、clientX、clientY、screenX、screenY、detail、altKey、shiftKey、ctrlKey和metaKey。此外，还包含两个额外的属性：rotation和scale。其中，rotation属性表示手指变化引起的旋转角度，负值表示逆时针旋转，正值表示顺时针旋转（该值从0开始）。而scale属性表示两个手指间距离的变化情况（例如向内收缩会缩短距离）；这个值从1开始，并随距离拉大而增长，随距离缩短而减小。
+
+> 触摸事件也会返回rotation和scale属性，但这两个属性只会在两个手指与屏幕保持接触时才会发生变化。
+
+## 13.5 内存和性能
+
+### 13.5.1 事件委托
+
+对“事件处理程序过多”问题的解决方案就是事件委托。事件委托利用了事件冒泡，只指定一个事件处理程序，就可以管理某一类型的所有事件。
+
+事件目标是被单击的列表项，故而可以通过检测id属性来决定采取适当的操作。这种技术需要占用的内存更少。所有用到按钮的事件（多数鼠标事件和键盘事件）都适合采用事件委托技术。
+
+可以考虑为document对象添加一个事件处理程序，这样做与采取传统的做法相比具有如下优点。
+
+- document对象很快就可以访问，而且可以在页面生命周期的任何时点上为它添加事件处理程序（无需等待DOMContentLoaded或load事件）。换句话说，只要可单击的元素呈现在页面上，就可以立即具备适当的功能。
+
+
+- 在页面中设置事件处理程序所需的时间更少。只添加一个事件处理程序所需的DOM引用更少，所花的时间也更少。
+
+
+- 整个页面占用的内存空间更少，能够提升整体性能。
+
+最适合采用事件委托技术的事件包括click、mousedown、mouseup、keydown、keyup和keypress。
+
+### 13.5.2 移除事件处理程序
+
+内存中留有那些过时不用的“空事件处理程序”（dangling event handler），也是造成Web应用程序内存与性能问题的主要原因。
+
+在两种情况下，可能会造成上述问题。第一种情况就是从文档中移除带有事件处理程序的元素时。这可能是通过纯粹的DOM操作，例如使用removeChild()和replaceChild()方法，但更多地是发生在使用innerHTML替换页面中某一部分的时候。如果带有事件处理程序的元素被innerHTML删除了，那么原来添加到元素中的事件处理程序极有可能无法被当作垃圾回收。如果你知道某个元素即将被移除，那么最好手工移除事件处理程序
+
+注意，在事件处理程序中删除按钮也能阻止事件冒泡。目标元素在文档中是事件冒泡的前提。
+
+采用事件委托也有助于解决这个问题。如果事先知道将来有可能使用innerHTML换掉页面中的某一部分，那么就可以不直接把事件处理程序添加到该部分的元素。而通过把事件处理程序指定给较高层次的元素，同样能够处理该区域中的事件。
+
+导致“空事件处理程序”的另一种情况，就是卸载页面的时候。
+
+IE8及更早版本在这种情况下依然是问题最多的浏览器。如果在页面被卸载之前没有清理干净事件处理程序，那它们就会滞留在内存中。一般来说，最好的做法是在页面卸载之前，先通过onunload事件处理程序移除所有事件处理程序。事件委托技术再次表现出它的优势——需要跟踪的事件处理程序越少，移除它们就越容易。
+
+> 不要忘了，使用onunload事件处理程序意味着页面不会被缓存在bfcache中。如果你在意这个问题，那么就只能在IE中通过onunload来移除事件处理程序了。
+
+## 13.6 模拟事件
+
+DOM2级规范为此规定了模拟特定事件的方式，IE9、Opera、Firefox、Chrome和Safari都支持这种方式。IE有它自己模拟事件的方式。
+
+### 13.6.1 DOM中的事件模拟
+
+可以在document对象上使用createEvent()方法创建event对象。这个方法接收一个参数，即表示要创建的事件类型的字符串。在DOM2级中，所有这些字符串都使用英文复数形式，而在DOM3级中都变成了单数。这个字符串可以是下列几字符串之一。
+
+- UIEvents：一般化的UI事件。鼠标事件和键盘事件都继承自UI事件。DOM3级中是UIEvent。
+- MouseEvents：一般化的鼠标事件。DOM3级中是MouseEvent。
+- MutationEvents：一般化的DOM变动事件。DOM3级中是MutationEvent。
+- HTMLEvents：一般化的HTML事件。没有对应的DOM3级事件（HTML事件被分散到其他类别中）。
+
+IE9是目前唯一支持DOM3级键盘事件的浏览器。
+
+在创建了event对象之后，还需要使用与事件有关的信息对其进行初始化。每种类型的event对象都有一个特殊的方法，为它传入适当的数据就可以初始化该event对象。不同类型的这个方法的名字也不相同，具体要取决于createEvent()中使用的参数。
+
+模拟事件的最后一步就是触发事件。这一步需要使用dispatchEvent()方法，所有支持事件的DOM节点都支持这个方法。调用dispatchEvent()方法时，需要传入一个参数，即表示要触发事件的event对象。
+
+#### 1. 模拟鼠标事件
+
+创建鼠标事件对象的方法是为createEvent()传入字符串"MouseEvents"。返回的对象有一个名为initMouseEvent()方法，用于指定与该鼠标事件有关的信息。这个方法接收15个参数，分别与鼠标事件中每个典型的属性一一对应；这些参数的含义如下。
+
+- type（字符串）：表示要触发的事件类型，例如"click"。
+- bubbles（布尔值）：表示事件是否应该冒泡。为精确地模拟鼠标事件，应该把这个参数设置为true。
+- cancelable（布尔值）：表示事件是否可以取消。为精确地模拟鼠标事件，应该把这个参数设置为true。
+- view（AbstractView）：与事件关联的视图。这个参数几乎总是要设置为document.defaultView。
+- detail（整数）：与事件有关的详细信息。这个值一般只有事件处理程序使用，但通常都设置为0。
+- screenX（整数）：事件相对于屏幕的X坐标。
+- screenY（整数）：事件相对于屏幕的Y坐标。
+- clientX（整数）：事件相对于视口的X坐标。
+- clientY（整数）：事件想对于视口的Y坐标。
+- ctrlKey（布尔值）：表示是否按下了Ctrl键。默认值为false。
+- altKey（布尔值）：表示是否按下了Alt键。默认值为false。
+- shiftKey（布尔值）：表示是否按下了Shift键。默认值为false。
+- metaKey（布尔值）：表示是否按下了Meta键。默认值为false。
+- button（整数）：表示按下了哪一个鼠标键。默认值为0。
+- relatedTarget（对象）：表示与事件相关的对象。这个参数只在模拟mouseover或mouseout时使用。
+
+前4个参数对正确地激发事件至关重要。当把event对象传给dispatchEvent()方法时，这个对象的target属性会自动设置。
+
+#### 2. 模拟键盘事件
+
+DOM3级规定，调用createEvent()并传入"KeyboardEvent"就可以创建一个键盘事件。返回的事件对象会包含一个initKeyEvent()方法，这个方法接收下列参数。
+
+- type（字符串）：表示要触发的事件类型，如"keydown"。
+- bubbles（布尔值）：表示事件是否应该冒泡。为精确模拟鼠标事件，应该设置为true。
+- cancelable（布尔值）：表示事件是否可以取消。为精确模拟鼠标事件，应该设置为true。
+- view（AbstractView）：与事件关联的视图。这个参数几乎总是要设置为document. defaultView。
+- key（布尔值）：表示按下的键的键码。
+- location（整数）：表示按下了哪里的键。0表示默认的主键盘，1表示左，2表示右，3表示数字键盘，4表示移动设备（即虚拟键盘），5表示手柄。
+- modifiers（字符串）：空格分隔的修改键列表，如"Shift"。
+- repeat（整数）：在一行中按了这个键多少次。
+
+由于DOM3级不提倡使用keypress事件，因此只能利用这种技术来模拟keydown和keyup事件。
+
+```javascript
+//模拟的是按住Shift 的同时又按下A键
+
+//以DOM3级方式创建事件对象
+if (document.implementation.hasFeature("KeyboardEvents", "3.0")){ 
+	event = document.createEvent("KeyboardEvent"); 
+	//初始化事件对象
+	event.initKeyboardEvent("keydown", true, true, document.defaultView, "a", 
+                        0, "Shift", 0); 
+} 
+//触发事件
+textbox.dispatchEvent(event); 
+```
+
+在Firefox中，调用createEvent()并传入"KeyEvents"就可以创建一个键盘事件。返回的事件对象会包含一个initKeyEvent()方法，这个方法接受下列10个参数。
+
+- type（字符串）：表示要触发的事件类型，如"keydown"。
+- bubbles（布尔值）：表示事件是否应该冒泡。为精确模拟鼠标事件，应该设置为true。
+- cancelable（布尔值）：表示事件是否可以取消。为精确模拟鼠标事件，应该设置为true。
+- view（AbstractView）：与事件关联的视图。这个参数几乎总是要设置为document.defaultView。
+- ctrlKey（布尔值）：表示是否按下了Ctrl键。默认值为false。
+- altKey（布尔值）：表示是否按下了Alt键。默认值为false。
+- shiftKey（布尔值）：表示是否按下了Shift键。默认值为false。
+- metaKey（布尔值）：表示是否按下了Meta键。默认值为false。
+- keyCode（整数）：被按下或释放的键的键码。这个参数对keydown和keyup事件有用，默认值为0。
+- charCode（整数）：通过按键生成的字符的ASCII编码。这个参数对keypress事件有用，默认值为0。
+
+将创建的event对象传入到dispatchEvent()方法就可以触发键盘事件
+
+必须要使用通用事件，而不能使用UI事件，因为UI事件不允许向event对象中再添加新属性（Safari除外）。
+
+#### 3. 模拟其他事件
+
+可以使用createEvent("MutationEvents")创建一个包含initMutationEvent()方法的变动事件对象。这个方法接受的参数包括：type、bubbles、cancelable、relatedNode、preValue、newValue、attrName和attrChange。
+
+要模拟HTML事件，同样需要先创建一个event对象——通过createEvent("HTMLEvents")，然后再使用这个对象的initEvent()方法来初始化它即可
+
+> 浏览器中很少使用变动事件和HTML事件，因为使用它们会受到一些限制。
+
+#### 4. 自定义DOM事件
+
+定义事件不是由DOM原生触发的，它的目的是让开发人员创建自己的事件。要创建新的自定义事件，可以调用createEvent("CustomEvent")。返回的对象有一个名为initCustomEvent()的方法，接收如下4个参数。
+
+- type（字符串）：触发的事件类型，例如"keydown"。
+- bubbles（布尔值）：表示事件是否应该冒泡。
+- cancelable（布尔值）：表示事件是否可以取消。
+- detail（对象）：任意值，保存在event对象的detail属性中。
+
+支持自定义DOM事件的浏览器有IE9+和Firefox 6+。
+
+#### 13.6.2 IE中的事件模拟
+
+用document.createEventObject()方法可以在IE中创建event对象。但与DOM方式不同的是，这个方法不接受参数，结果会返回一个通用的event对象。
+
+然后，你必须手工为这个对象添加所有必要的信息（没有方法来辅助完成这一步骤）。
+
+最后一步就是在目标上调用fireEvent()方法，这个方法接受两个参数：事件处理程序的名称和event 对象。在调用fireEvent()方法时，会自动为event对象添加srcElement和type属性；其他属性则都是必须通过手工添加的。换句话说，模拟任何IE支持的事件都采用相同的模式。
+
+注意，这里可以为对象随意添加属性，不会有任何限制——即使添加的属性IE8及更早版本并不支持也无所谓。在此添加的属性对事件没有什么影响，因为只有事件处理程序才会用到它们。
+
+## 13.7小结
+
+在使用事件时，需要考虑如下一些内存与性能方面的问题。
+
+- 有必要限制一个页面中事件处理程序的数量，数量太多会导致占用大量内存，而且也会让用户感觉页面反应不够灵敏。
+- 建立在事件冒泡机制之上的事件委托技术，可以有效地减少事件处理程序的数量。
+- 建议在浏览器卸载页面之前移除页面中的所有事件处理程序。
+
+
+
+# 第14章 表单脚本
+
+## 14.1 表单的基础知识
+
+在HTML中，表单是由`<form>`元素来表示的，而在JavaScript中，表单对应的则是HTMLFormElement类型。
+
+HTMLFormElement区别HTMLElement独有的属性和方法：
+
+- acceptCharset：服务器能够处理的字符集；等价于HTML中的accept-charset特性。
+- action：接受请求的URL；等价于HTML中的action特性。
+- elements：表单中所有控件的集合（HTMLCollection）。
+- enctype：请求的编码类型；等价于HTML中的enctype特性。
+- length：表单中控件的数量。
+- method：要发送的HTTP请求类型，通常是"get"或"post"；等价于HTML的method特性。
+- name：表单的名称；等价于HTML的name特性。
+- reset()：将所有表单域重置为默认值。
+- submit()：提交表单。
+- target：用于发送请求和接收响应的窗口名称；等价于HTML的target特性。
+
+取得`<form>`元素引用的方式：
+
+最常见的方式就是将它看成与其他元素一样，并为其添加id特性，然后再像下面这样使用getElementById()方法找到它
+
+其次，通过document.forms可以取得页面中所有的表单。在这个集合中，可以通过数值索引或name值来取得特定的表单
+
+在较早的浏览器或者那些支持向后兼容的浏览器中，也会把每个设置了name特性的表单作为属性保存在document对象中。例如，通过document.form2可以访问到名为"form2"的表单。不过，我们不推荐使用这种方式：一是容易出错，二是将来的浏览器可能会不支持。
+
+### 14.1.1 提交表单
+
+用户单击提交按钮或图像按钮时，就会提交表单。
+
+使用`<input>`或`<button>`都可以定义提交按钮，只要将其type特性的值设置为"submit"即可，而图像按钮则是通过将`<input>`的type特性值设置为"image"来定义的。
+
+调用prevetnDefault()方法阻止了表单提交。
+
+在JavaScript中，以编程方式调用submit()方法也可以提交表单。而且，这种方式无需表单包含提交按钮，任何时候都可以正常提交表单。
+
+提交表单时可能出现的最大问题，就是重复提交表单。在解决这一问题的办法有两个：在第一次提交表单后就禁用提交按钮，或者利用onsubmit事件处理程序取消后续的表单提交操作。
+
+### 14.1.2 重置表单
+
+在用使用type特性值为"reset"的`<input>`或`<button>`都可以创建重置按钮
+
+在重置表单时，所有表单字段都会恢复到页面刚加载完毕时的初始值。如果某个字段的初始值为空，就会恢复为空；而带有默认值的字段，也会恢复为默认值。
+
+可以在触发reset事件时取消重置操作。
+
+也可以通过JavaScript来重置表单
+
+> 事实上，重置表单的需求很少见。更常见的做法是提供一个取消按钮，让用户能够回到前一个页面。
+
+### 14.1.3 表单字段
+
+可以使用原生DOM方法访问表单元素。
+
+每个表单都有elements属性，该属性是表单中所有表单元素（字段）的集合。这个elements集合是一个有序列表，其中包含着表单中的所有字段。每个表单字段在elements集合中的顺序，与它们出现在标记中的顺序相同，可以按照位置和name特性来访问它们。
+
+如果有多个表单控件都在使用一个name），那么就会返回以该name 命名的一个NodeList。
+
+也可以通过访问表单的属性来访问元素。但应该尽可能使用elements，通过表单属性访问元素只是为了与旧浏览器向后兼容而保留的一种过渡方式。
+
+#### 1.  共有的表单字段属性
+
+除了`<fieldset>`元素之外，所有表单字段都拥有相同的一组属性。
+
+表单字段共有的属性如下。
+
+- disabled：布尔值，表示当前字段是否被禁用。
+- form：指向当前字段所属表单的指针；只读。
+- name：当前字段的名称。
+- readOnly：布尔值，表示当前字段是否只读。
+- tabIndex：表示当前字段的切换（tab）序号。
+- type：当前字段的类型。
+- value：当前字段将被提交给服务器的值。对文件字段来说，这个属性是只读的，包含着文件在计算机中的路径。
+
+除了form属性之外，可以通过JavaScript动态修改其他任何属性。
+
+例如，很多用户可能会重复单击表单的提交按钮。最常见的解决方案，就是在第一次单击后就禁用提交按钮。只要侦听submit事件，并在该事件生时禁用提交按钮即可。
+
+注意，不能通过onclick事件处理程序来实现这个功能，原因是不同浏览器之间存在“时差”：有的浏览器会在触发表单的submit事件之前触发click事件，而有的浏览器则相反。对于先触发click事件的浏览器，意味着会在提交发生之前禁用按钮，结果永远都不会提交表单。
+
+除了`<fieldset>`之外，所有表单字段都有type属性。对于`<input>`元素，这个值等于HTML特性type的值。对于其他元素，这个type属性的值如下表所列。
+
+| 说 明      | HTML示例                                 | type属性的值          |
+| -------- | -------------------------------------- | ----------------- |
+| 单选列表     | `<select>`...`</select>`               | "select-one"      |
+| 多选列表     | `<select multiple>`...`</select>`      | "select-multiple" |
+| 自定义按钮    | `<button>`...`</button>`               | "submit"          |
+| 自定义非提交按钮 | `<button type="button">`...`</button>` | "button"          |
+| 自定义重置按钮  | `<button type="reset">`...`</buton>`   | "reset"           |
+| 自定义提交按钮  | `<button type="submit">`...`</buton>`  | "submit"          |
+
+此外，`<input>`和`<button>`元素的type属性是可以动态修改的，而`<select>`元素的type属性则是只读的。
+
+#### 2. 共有的表单字段方法
+
+每个表单字段都有两个方法：focus()和blur()。
+
+focus()方法用于将浏览器的焦点设置到表单字段，即激活表单字段，使其可以响应键盘事件。
+
+HTML5为表单字段新增了一个autofocus属性。在支持这个属性的浏览器中，只要设置这个属性，不用JavaScript就能自动把焦点移动到相应字段。
+
+autofocus是一个布尔值属性，在不支持的浏览器中，它的值将是空字符串。
+
+支持autofocus属性的浏览器有Firefox 4+、Safari 5+、Chrome和Opera 9.6。
+
+在默认情况下，只有表单字段可以获得焦点。对于其他元素而言，如果先将其tabIndex属性设置为1, 然后再调用focus()方法，也可以让这些元素获得焦点。
+
+只有Opera不支持这种技术。
+
+调用blur()方法时，并不会把焦点转移到某个特定的元素上；仅仅是将焦点从调用这个方法的元素上面移走而已。
+
+#### 3. 共有的表单字段事件
+
+所有表单字段都支持下列3个事件。
+
+- blur：当前字段失去焦点时触发。
+- change：对于`<input>`和`<textarea>`元素，在它们失去焦点且value 值改变时触发；对于`<select>`元素，在其选项改变时触发。
+- focus：当前字段获得焦点时触发。
+
+change事件在不同表单控件中触发的次数会有所不同。对于`<input>`和`<textarea>`元素，当它们从获得焦点到失去焦点且value值改变时，才会触发change事件。对于`<select>`元素，只要用户选择了不同的选项，就会触发change事件；
+
+focus和blur事件来以某种方式改变用户界面，要么是向用户给出视觉提示，要么是向界面中添加额外的功能；change事件则经常用于验证用户在字段中输入的数据。
+
+> 关于blur和change事件的关系，并没有严格的规定。在某些浏览器中，blur事件会先于change事件发生；而在其他浏览器中，则恰好相反。为此，不能假定这两个事件总会以某种顺序依次触发，这一点要特别注意。
+
+## 14.2 文本框脚本
+
+在HTML中，有两种方式来表现文本框：一种是使用`<input>`元素的单行文本框，另一种是使用`<textarea>`的多行文本框。
+
+要表现文本框，必须将`<input>`元素的type特性设置为"text"。而通过设置size特性，可以指定文本框中能够显示的字符数。通过value特性，可以设置文本框的初始值，而maxlength特性则用于指定文本框可以接受的最大字符数。
+
+相对而言，`<textarea>`元素则始终会呈现为一个多行文本框。要指定文本框的大小，可以使用rows和cols特性。其中，rows特性指定的是文本框的字符行数，而cols特性指定的是文本框的字符列数（类似于`<inpu>`元素的size 特性）。与`<input>`元素不同，`<textarea>`的初始值必须要放在`<textarea>`和`</textarea>`之间 
+
+另一个与`<input>`的区别在于，不能在HTML中给`<textarea>`指定最大字符数。
+
+建议使用value属性读取或设置文本框的值，不建议使用标准的DOM方法。即不要使用setAttribute()设置`<input>`元素的value特性，也不要去修改`<textarea>`元素的第一个子节点。原因很简单：对value属性所作的修改，不一定会反映在DOM中。
+
+### 14.2.1 选择文本
+
+上述两种文本框都支持select()方法，这个方法用于选择文本框中的所有文本。在调用select()  方法时，大多数浏览器（Opera除外）都会将焦点设置到文本框中。这个方法不接受参数，可以在任何时候被调用。   
+
+在文本框获得焦点时选择其所有文本，这是一种非常常见的做法，特别是在文本框包含默认值的时候。因为这样做可以让用户不必一个一个地删除文本。
+
+#### 1. 选择（select）事件
+
+在选择了文本框中的文本时，就会触发select事件。
+
+在IE9+、Opera、Firefox、Chrome和Safari中，只有用户选择了文本（而且要释放鼠标），才会触发select事件。而在IE8及更早版本中，只要用户选择了一个字母（不必释放鼠标），就会触发select事件。另外，在调用select()方法时也会触发select事件。
+
+#### 2. 取得选择的文本
+
+虽然通过select事件我们可以知道用户什么时候选择了文本，但仍然不知道用户选择了什么文本。
+
+HTML5规范采取的办法是添加两个属性：selectionStart和selectionEnd。这两个属性中保存的是基于0的数值，表示所选择文本的范围（即文本选区开头和结尾的偏移量）。
+
+```javascript
+function getSelectedText(textbox){ 
+	return textbox.value.substring(textbox.selectionStart, textbox.selectionEnd); 
+} 
+```
+
+IE8及之前版本不支持这两个属性，有一个document.selection对象，其中保存着用户在整个文档范围内选择的文本信息；也就是说，无法确定用户选择的是页面中哪个部位的文本。不过，在与select事件一起使用的时候，可以假定是用户选择了文本框中的文本，因而触发了该事件。要取得选择的文本，首先必须创建一个范围，然后再将文本从其中提取出来
+
+```javascript
+function getSelectedText(textbox){ 
+    if (typeof textbox.selectionStart == "number"){ 
+    		return textbox.value.substring(textbox.selectionStart, 
+    			textbox.selectionEnd); 
+    } else if (document.selection){ 
+   	 return document.selection.createRange().text; 
+    } 
+} 
+```
+
+注意，调用document.selection时，不需要考虑textbox参数。
+
+#### 3. 选择部分文本
+
+HTML5也为选择文本框中的部分文本提供了解决方案，即setSelectionRange()方法。这个方法接收两个参数：要选择的第一个字符的索引和要选择的最后一个字符之后的字符的索引（类似于substring()方法的两个参数）。
+
+要看到选择的文本，必须在调用setSelectionRange()之前或之后立即将焦点设置到文本框。
+
+IE8及更早版本支持使用范围选择部分文本。要选择文本框中的部分文本，必须首先使用IE在所有文本框上提供的createTextRange()方法创建一个范围，并将其放在恰当的位置上。然后，再使用moveStart()和moveEnd()这两个范围方法将范围移动到位。不过，在调用这两个方法以前，还必须使用collapse()将范围折叠到文本框的开始位置。此时，moveStart()将范围的起点和终点移动到了相同的位置，只要再给moveEnd()传入要选择的字符总数即可。最后一步，就是使用范围的select()方法选择文本
+
+### 14.2.2 过滤输入
+
+#### 1. 屏蔽字符
+
+响应向文本框中插入字符操作的是keypress事件。因此，可以通过阻止这个事件的默认行为来屏蔽此类字符。
+
+如果只想屏蔽特定的字符，则需要检测keypress事件对应的字符编码，然后再决定如何响应。
+
+如果只想屏蔽特定的字符，则需要检测keypress事件对应的字符编码，然后再决定如何响应。
+
+虽然理论上只应该在用户按下字符键时才触发keypress事件，但有些浏览器也会对其他键触发此事件。这意味着，仅考虑到屏蔽不是数值的字符还不够，还要避免屏蔽这些极为常用和必要的键。为了让代码更通用，只要不屏蔽那些字符编码小于10的键即可。
+
+除此之外，还有一个问题需要处理：复制、粘贴及其他操作还要用到Ctrl键。
+
+```javascript
+EventUtil.addHandler(textbox, "keypress", function(event){ 
+    event = EventUtil.getEvent(event); 
+    var target = EventUtil.getTarget(event); 
+    var charCode = EventUtil.getCharCode(event); 
+    if (!/\d/.test(String.fromCharCode(charCode)) && charCode > 9 && 
+    			!event.ctrlKey){ 
+    	EventUtil.preventDefault(event); 
+    } 
+}); 
+```
+
+#### 2. 操作剪贴板
+
+Opera不支持通过JavaScript访问剪贴板。
+
+HTML 5把剪贴板事件纳入了规范。下列就是6个剪贴板事件。
+
+- beforecopy：在发生复制操作前触发。
+- copy：在发生复制操作时触发。
+- beforecut：在发生剪切操作前触发。
+- cut：在发生剪切操作时触发。
+- beforepaste：在发生粘贴操作前触发。
+- paste：在发生粘贴操作时触发。
+
+在Safari、Chrome和Firefox中，beforecopy、beforecut和beforepaste事件只会在显示针对文本框的上下文菜单（预期将发生剪贴板事件）的情况下触发。但是，IE则会在触发copy、cut和paste事件之前先行触发这些事件。至于copy、cut和paste事件，只要是在上下文菜单中选择了相应选项，或者使用了相应的键盘组合键，所有浏览器都会触发它们。
+
+在实际的事件发生之前，通过beforecopy、beforecut和beforepaste事件可以在向剪贴板发送数据，或者从剪贴板取得数据之前修改数据。不过，取消这些事件并不会取消对剪贴板的操作——只有取消copy、cut和paste事件，才能阻止相应操作发生。
+
+要访问剪贴板中的数据，可以使用clipboardData对象：在IE中，这个对象是window对象的属性；而在Firefox 4+、Safari和Chrome中，这个对象是相应event对象的属性。但是，在Firefox、Safari和Chorme中，只有在处理剪贴板事件期间clipboardData对象才有效，这是为了防止对剪贴板的未授权访问；在IE中，则可以随时访问clipboardData对象。
+
+clipboardData对象有三个方法：getData()、setData()和clearData()。其中，getData()用于从剪贴板中取得数据，它接受一个参数，即要取得的数据的格式。在IE中，有两种数据格式："text"和"URL"。在Firefox、Safari和Chrome中，这个参数是一种MIME类型；不过，可以用"text"代表"text/plain"。
+
+setData()方法的第一个参数也是数据类型，第二个参数是要放在剪贴板中的文本。对于第一个参数，IE 照样支持"text"和"URL"，而Safari和Chrome仍然只支持MIME类型。但是，与getData()方法不同的是，Safari和Chrome的setData()方法不能识别"text"类型。
+
+在需要确保粘贴到文本框中的文本中包含某些字符，或者符合某种格式要求时，能够访问剪贴板是非常有用的。
+
+Firefox、Safari和Chrome只允许在onpaste事件处理程序中访问getData()方法。
+
+由于并非所有浏览器都支持访问剪贴板，所以更简单的做法是屏蔽一或多个剪贴板操作。在支持copy、cut和paste事件的浏览器中（IE、Safari、Chrome和Firefox 3及更高版本），很容易阻止这些事件的默认行为。在Opera中，则需要阻止那些会触发这些事件的按键操作，同时还要阻止在文本框中显示上下文菜单。
+
+### 14.2.3 自动切换焦点
+
+通常，在自动切换焦点之前，必须知道用户已经输入了既定长度的数据
+
+### 14.2.4 HTML5约束验证API
+
+只有在某些情况下表单字段才能进行自动验证。具体来说，就是要在HTML标记中为特定的字段指定一些约束，然后浏览器才会自动执行表单验证。
+
+#### 1. 必填字段
+
+第一种情况是在表单字段中指定了required属性
+
+```javascript
+<input type="text" name="username"required>
+```
+
+任何标注有required的字段，在提交表单时都不能空着。这个属性适用于`<input>`、`<textarea>`和`<select>`字段（Opera 11及之前版本还不支持`<select>`的required属性）
+
+使用下面这行代码可以测试浏览器是否支持required属性。
+
+```javascript
+var isRequiredSupported = "required" in document.createElement("input"); 
+```
+
+对于空着的必填字段，不同浏览器有不同的处理方式。Firefox 4和Opera 11会阻止表单提交并在相应字段下方弹出帮助框，而Safari（5之前）和Chrome（9之前）则什么也不做，而且也不阻止表单提交。
+
+#### 2. 其他输入类型
+
+HTML5为`<input>`元素的type属性又增加了几个值。
+
+其中，"email"和"url"是两个得到支持最多的类型，各浏览器也都为它们增加了定制的验证机制。顾名思义，"email"类型要求输入的文本必须符合电子邮件地址的模式，而"url"类型要求输入的文本必须符合URL的模式。
+
+设置特定的输入类型并不能阻止用户输入无效的值，只是应用某些默认的验证而已。
+
+#### 3. 数值范围
+
+这几个元素都要求填写某种基于数字的值："number"、"range"、"datetime"、"datetime-local"、"date"、"month"、"week"，还有"time"。浏览器对这几个类型的支持情况并不好
+
+对所有这些数值类型的输入元素，可以指定min属性（最小的可能值）、max属性（最大的可能值）和step属性（从min到max的两个刻度间的差值）。
+
+在不同的浏览器中，可能会也可能不会看到能够自动递增和递减的数值调节按钮（向上和向下按钮）。
+
+还有两个方法：stepUp()和stepDown()，都接收一个可选的参数：要在当前值基础上加上或减去的数值。（默认是加或减1。）这两个方法还没有得到任何浏览器支持
+
+#### 4. 输入模式
+
+HTML5为文本字段新增了pattern属性。这个属性的值是一个正则表达式，用于匹配文本框中的值。
+
+注意，模式的开头和末尾不用加^和$符号（假定已经有了）。这两个符号表示输入的值必须从头到尾都与模式匹配。
+
+与其他输入类型相似，指定pattern也不能阻止用户输入无效的文本。
+
+使用以下代码可以检测浏览器是否支持pattern属性。
+
+```javascript
+var isPatternSupported = "pattern" in document.createElement("input"); 
+```
+
+#### 5. 检测有效性
+
+使用checkValidity()方法可以检测表单中的某个字段是否有效。所有表单字段都有这个方法，如果字段的值有效，这个方法返回true，否则返回false。字段的值是否有效的判断依据是本节前面介绍过的那些约束。换句话说，必填字段中如果没有值就是无效的，而字段中的值与pattern属性不匹配也是无效的。
+
+要检测整个表单是否有效，可以在表单自身调用checkValidity()方法。如果所有表单字段都有效，这个方法返回true；即使有一个字段无效，这个方法也会返回false。
+
+validity属性则会告诉你为什么字段有效或无效。这个对象中包含一系列属性，每个属性会返回一个布尔值。
+
+- customError ：如果设置了setCustomValidity()，则为true，否则返回false。
+- patternMismatch：如果值与指定的pattern属性不匹配，返回true。
+- rangeOverflow：如果值比max值大，返回true。
+- rangeUnderflow：如果值比min值小，返回true。
+- stepMisMatch：如果min和max之间的步长值不合理，返回true。
+- tooLong：如果值的长度超过了maxlength属性指定的长度，返回true。有的浏览器（如Firefox 4）会自动约束字符数量，因此这个值可能永远都返回false。
+- typeMismatch：如果值不是"mail"或"url"要求的格式，返回true。
+- valid：如果这里的其他属性都是false，返回true。checkValidity()也要求相同的值。
+- valueMissing：如果标注为required的字段中没有值，返回true。
+
+#### 6. 禁用验证
+
+通过设置novalidate属性，可以告诉表单不进行验证。
+
+```html
+<form method="post" action="signup.php"novalidate> 
+	<!--这里插入表单元素--> 
+</form> 
+```
+
+在JavaScript中使用noValidate属性可以取得或设置这个值，如果这个属性存在，值为true，如果不存在，值为false。
+
+如果一个表单中有多个提交按钮，为了指定点击某个提交按钮不必验证表单，可以在相应的按钮上添加formnovalidate属性。使用JavaScript也可以设置这个属性。
+
+## 14.3 选择框脚本
+
+选择框是通过`<select>`和`<option>`元素创建的。除了所有表单字段共有的属性和方法外，HTMLSelectElement类型还提供了下列属性和方法。
+
+- add(newOption, relOption)：向控件中插入新<option>元素，其位置在相关项（relOption）之前。
+- multiple：布尔值，表示是否允许多项选择；等价于HTML中的multiple特性。
+- options：控件中所有<option>元素的HTMLCollection。
+- remove(index)：移除给定位置的选项。
+- selectedIndex：基于0的选中项的索引，如果没有选中项，则值为-1。对于支持多选的控件，只保存选中项中第一项的索引。
+- size：选择框中可见的行数；等价于HTML中的size特性。
+
+选择框的type属性不是"select-one"，就是"select-multiple"，这取决于HTML代码中有没有multiple特性。选择框的value属性由当前选中项决定，相应规则如下。
+
+- 如果没有选中的项，则选择框的value属性保存空字符串。
+- 如果有一个选中项，而且该项的value特性已经在HTML中指定，则选择框的value属性等于选中项的value特性。即使value特性的值是空字符串，也同样遵循此条规则。
+- 如果有一个选中项，但该项的value特性在HTML中未指定，则选择框的value属性等于该项的文本。
+- 如果有多个选中项，则选择框的value属性将依据前两条规则取得第一个选中项的值。
+
+在DOM中，每个`<option>`元素都有一个HTMLOptionElement 对象表示。为便于访问数据，HTMLOptionElement对象添加了下列属性：
+
+- index：当前选项在options集合中的索引。
+- label：当前选项的标签；等价于HTML中的label特性。
+- selected：布尔值，表示当前选项是否被选中。将这个属性设置为true可以选中当前选项。
+- text：选项的文本。
+- value：选项的值（等价于HTML中的value特性）。
+
+在操作选项时，我们建议最好是使用特定于选项的属性，因为所有浏览器都支持这些属性。不推荐使用标准DOM技术修改`<option>`元素的文本或者值。
+
+选择框的change事件与其他表单字段的change事件触发的条件不一样。其他表单字段的change 事件是在值被修改且焦点离开当前字段时触发，而选择框的change事件只要选中了选项就会触发。
+
+> 不同浏览器下，选项的value属性返回什么值也存在差别。但是，在所有浏览器中，value属性始终等于value特性。在未指定value特性的情况下，IE8会返回空字符串，而IE9+、Safari、Firefox、Chrome和Opera则会返回与text特性相同的值。
+
+### 14.3.1 选择选项
+
+对于只允许选择一项的选择框，访问选中项的最简单方式，就是使用选择框的selectedIndex属性
+
+对于可以选择多项的选择框，selectedfIndex 属性就好像只允许选择一项一样。设置selectedIndex会导致取消以前的所有选项并选择指定的那一项，而读取selectedIndex则只会返回选中项中第一项的索引值。
+
+另一种选择选项的方式，就是取得对某一项的引用，然后将其selected属性设置为true。
+
+在允许多选的选择框中设置选项的selected属性，不会取消对其他选中项的选择，因而可以动态选中任意多个项。但是，如果是在单选选择框中，修改某个选项的selected属性则会取消对其他选项的选择。需要注意的是，将selected属性设置为false对单选选择框没有影响。
+
+### 14.3.2 添加选项
+
+添加选项的方式有很多，第一种方式就是使用如下所示的DOM方法。
+
+```javascript
+var newOption = document.createElement("option"); 
+newOption.appendChild(document.createTextNode("Option text")); 
+newOption.setAttribute("value", "Option value"); 
+selectbox.appendChild(newOption); 
+```
+
+第二种方式是使用Option构造函数来创建新选项。Option构造函数接受两个参数：文本（text）和值（value）；第二个参数可选。虽然这个构造函数会创建一个Object的实例，但兼容DOM的浏览器会返回一个`<option>`元素。
+
+```javascript
+var newOption = new Option("Option text", "Option value"); 
+selectbox.appendChild(newOption); //在IE8及之前版本中有问题
+```
+
+第三种添加新选项的方式是使用选择框的add()方法。DOM规定这个方法接受两个参数：要添加的新选项和将位于新选项之后的选项。如果想在列表的最后添加一个选项，应该将第二个参数设置为null。在IE对add()方法的实现中，第二个参数是可选的，而且如果指定，该参数必须是新选项之后选项的索引。兼容DOM的浏览器要求必须指定第二个参数。这时候，为第二个参数传入undefined，就可以在所有浏览器中都将新选项插入到列表最后了。
+
+### 14.3.3 移除选项
+
+首先，可以使用DOM的removeChild()方法，为其传入要移除的选项
+
+```javascript
+selectbox.removeChild(selectbox.options[0]); //移除第一个选项
+```
+
+其次，可以使用选择框的remove()方法。这个方法接受一个参数，即要移除选项的索引
+
+```javascript
+selectbox.remove(0); //移除第一个选项
+```
+
+最后一种方式，就是将相应选项设置为null。
+
+```javascript
+selectbox.options[0] = null; //移除第一个选项
+```
+
+### 14.3.4 移动和重排选项
+
+使用DOM的appendChild()方法，就可以将第一个选择框中的选项直接移动到第二个选择框中。如果为appendChild()方法传入一个文档中已有的元素，那么就会先从该元素的父节点中移除它，再把它添加到指定的位置。
+
+移动选项与移除选项有一个共同之处，即会重置每一个选项的index属性。
+
+重排选项次序最好的方式仍然是使用DOM方法。要将选择框中的某一项移动到特定位置，最合适的DOM方法就是insertBefore()；appendChild()方法只适用于将选项添加到选择框的最后。
+
+> IE7存在一个页面重绘问题，有时候会导致使用DOM方法重排的选项不能马上正确显示。
+
+## 14.4 表单序列化
+
+在JavaScript中，可以利用表单字段的type属性，连同name和value属性一起实现对表单的序列化。
+
+在表单提交期间，浏览器是怎样将数据发送给服务器的。
+
+- 对表单字段的名称和值进行URL编码，使用和号（&）分隔。
+- 不发送禁用的表单字段。
+- 只发送勾选的复选框和单选按钮。
+- 不发送type为"reset"和"button"的按钮。
+- 多选选择框中的每个选中的值单独一个条目。
+- 在单击提交按钮提交表单的情况下，也会发送提交按钮；否则，不发送提交按钮。也包括type为"image"的`<input>`元素。
+- `<select>`元素的值，就是选中的`<option>`元素的value特性的值。如果`<option>`元素没有value特性，则是`<option>`元素的文本值。
+
+在表单序列化过程中，一般不包含任何按钮字段，因为结果字符串很可能是通过其他方式提交的。除此之外的其他上述规则都应该遵循。
+
+## 14.5 富文本编辑
+
+富文本编辑，又称为WYSIWYG（What You See Is What You Get，所见即所得）。
+
+虽然也没有规范，已经出现了事实标准。浏览器都会支持。
+
+这一技术的本质，就是在页面中嵌入一个包含空HTML页面的iframe。通过设置designMode属性，这个空白的HTML页面可以被编辑，而编辑对象则是该页面<body>元素的HTML代码。designMode属性有两个可能的值："off"（默认值）和"on"。在设置为"on"时，整个文档都会变得可以编辑（显示插入符号），然后就可以像使用字处理软件一样，通过键盘将文本内容加粗、变成斜体，等等。
+
+### 14.5.1使用contenteditable属性
+
+另一种编辑富文本内容的方式是使用名为contenteditable的特殊属性。
+可以把contenteditable属性应用给页面中的任何元素，然后用户立即就可以编辑该元素。
+
+通过在这个元素上设置contenteditable属性，也能打开或关闭编辑模式。
+contenteditable属性有三个可能的值："true"表示打开、"false"表示关闭，"inherit"表示从父元素那里继承（因为可以在contenteditable元素中创建或删除元素）。
+
+支持contenteditable属性的元素有IE、Firefox、Chrome、Safari和Opera。在移动设备上，支持contenteditable属性的浏览器有iOS 5+中的Safari和Android 3+中的WebKit。
+
+### 14.5.2 操作富文本
+
+与富文本编辑器交互的主要方式，就是使用document.execCommand()。
+这个方法可以对文档执行预定义的命令，而且可以应用大多数格式。可以为document.execCommand()方法传递3个参数：要执行的命令名称、表示浏览器是否应该为当前命令提供用户界面的一个布尔值和执行命令必须的一个值（如果不需要值，则传递null）。为了确保跨浏览器的兼容性，第二个参数应该始终设置为false，因为Firefox会在该参数为true时抛出错误。
+
+不同浏览器支持的预定义命令也不一样。下表列出了那些被支持最多的命令。
+
+| 命 令                  | 值（第三个参数）                | 说 明                                   |
+| -------------------- | ----------------------- | ------------------------------------- |
+| backcolor            | 颜色字符串                   | 设置文档的背景颜色                             |
+| bold                 | null                    | 将选择的文本转换为粗体                           |
+| copy                 | null                    | 将选择的文本复制到剪贴板                          |
+| createlink           | URL字符串                  | 将选择的文本转换成一个链接，指向指定的URL                |
+| cut                  | null                    | 将选择的文本剪切到剪贴板                          |
+| delete               | null                    | 删除选择的文本                               |
+| fontname             | 字体名称                    | 将选择的文本修改为指定字体                         |
+| fontsize             | 1～7                     | 将选择的文本修改为指定字体大小                       |
+| forecolor            | 颜色字符串                   | 将选择的文本修改为指定的颜色                        |
+| formatblock          | 要包围当前文本块的HTML标签；如`<h1>` | 使用指定的HTML标签来格式化选择的文本块                 |
+| indent               | null                    | 缩进文本                                  |
+| inserthorizontalrule | null                    | 在插入字符处插入一个`<hr>`元素                    |
+| insertimage          | 图像的URL                  | 在插入字符处插入一个图像                          |
+| insertorderedlist    | null                    | 在插入字符处插入一个`<ol>`元素                    |
+| insertunorderedlist  | null                    | 在插入字符处插入一个`<ul>`元素                    |
+| insertparagraph      | null                    | 在插入字符处插入一个`<p>`元素                     |
+| italic               | null                    | 将选择的文本转换成斜体                           |
+| justifycenter        | null                    | 将插入光标所在文本块居中对齐                        |
+| justifyleft          | null                    | 将插入光标所在文本块左对齐                         |
+| outdent              | null                    | 凸排文本（减少缩进）                            |
+| paste                | null                    | 将剪贴板中的文本粘贴到选择的文本                      |
+| removeformat         | null                    | 移除插入光标所在文本块的块级格式。这是撤销formatblock命令的操作 |
+| selectall            | null                    | 选择文档中的所有文本                            |
+| underline            | null                    | 为选择的文本添加下划线                           |
+| unlink               | null                    | 移除文本的链接。这是撤销createlink命令的操作           |
+
+与剪贴板有关的命令在不同浏览器中的差异极大。Opera根本没有实现任何剪贴板命令，而Firefox在默认情况下会禁用它们（必须修改用户的首选项来启用它们）。Safari和Chrome实现了cut和copy，但没有实现paste。不过，即使不能通过document.execCommand()来执行这些命令，但却可以通过相应的快捷键来实现同样的操作。
+
+可以在任何时候使用这些命令来修改富文本区域的外观，同样的方法也适用于页面中contenteditable属性为"true"的区块，只要把对框架的引用替换成当前窗口的document对象即可。
+
+需要注意的是，虽然所有浏览器都支持这些命令，但这些命令所产生的HTML仍然有很大不同。
+
+还有一些与命令相关的方法。第一个方法就是queryCommandEnabled()，可以用它来检测是否可以对当前选择的文本，或者当前插入字符所在位置执行某个命令。
+这个方法接收一个参数，即要检测的命令。如果当前编辑区域允许执行传入的命令，这个方法返回true，否则返回false。
+
+queryCommandState()方法用于确定是否已将指定命令应用到了选择的文本。
+
+queryCommandValue()方法用于取得执行命令时传入的值。通过这个方法可以确定某个命令是怎样应用到选择的文本的，可以据以确定再对其应用后续命令是否合适。
+
+### 14.5.3 富文本选区
+
+在富文本编辑器中，使用框架（iframe）的getSelection()方法，可以确定实际选择的文本。这个方法是window对象和document对象的属性，调用它会返回一个表示当前选择文本的Selection对象。
+
+Selection对象属性：
+
+- anchorNode：选区起点所在的节点。
+- anchorOffset：在到达选区起点位置之前跳过的anchorNode中的字符数量。
+- focusNode：选区终点所在的节点。
+- focusOffset：focusNode中包含在选区之内的字符数量。
+- isCollapsed：布尔值，表示选区的起点和终点是否重合。
+- rangeCount：选区中包含的DOM范围的数量。
+
+Selection 对象的方法：
+
+- addRange(range)：将指定的DOM范围添加到选区中。
+- collapse(node, offset)：将选区折叠到指定节点中的相应的文本偏移位置。
+
+
+- collapseToEnd()：将选区折叠到终点位置。
+- collapseToStart()：将选区折叠到起点位置。
+- containsNode(node)：确定指定的节点是否包含在选区中。
+- deleteFromDocument()：从文档中删除选区中的文本，与document.execCommand("delete", false, null)命令的结果相同。
+- extend(node, offset)：通过将focusNode和focusOffset移动到指定的值来扩展选区。
+- getRangeAt(index)：返回索引对应的选区中的DOM范围。
+- removeAllRanges()：从选区中移除所有DOM范围。实际上，这样会移除选区，因为选区中至少要有一个范围。
+- reomveRange(range)：从选区中移除指定的DOM范围。
+- selectAllChildren(node)：清除选区并选择指定节点的所有子节点。
+- toString()：返回选区所包含的文本内容。
+
+HTML5将getSelection()方法纳入了标准。由于历史原因，在Firefox 3.6+中调用document.getSelection()会返回一个字符串。为此，可以在Firefox 3.6+中改作调用window.getSelection()，从而返回selection对象。Firefox 8修复了document.getSelection()的bug，能返回与window.getSelection()相同的值。
+
+IE8及更早的版本不支持DOM范围，但我们可以通过它支持的selection对象操作选择的文本。IE中的selection对象是document的属性。
+
+### 14.5.4 表单与富文本
+
+从技术上说，富文本编辑器并不属于表单。换句话说，富文本编辑器中的HTML不会被自动提交给服务器，而需要我们手工来提取并提交HTML。为此，通常可以添加一个隐藏的表单字段，让它的值等于从iframe中提取出的HTML。
+
+## 14.6小结
+
+本章介绍的几个概念
+
+- 可以使用一些标准或非标准的方法选择文本框中的全部或部分文本。
+- 大多数浏览器都采用了Firefox操作选择文本的方式，但IE仍然坚持自己的实现。
+- 在文本框的内容变化时，可以通过侦听键盘事件以及检测插入的字符，来允许或禁止用户输入某些字符。
+
+除Opera之外的所有浏览器都支持剪贴板事件，包括copy、cut和paste。其他浏览器在实现剪贴板事件时也可以分为几种不同的情况。
+
+- IE、Firefox、Chrome和Safari允许通过JavaScript访问剪贴板中的数据，而Opera不允许这种访问方式。
+- 即使是IE、Chrome和Safari，它们各自的实现方式也不相同。
+- Firefox、Safari和Chrome只允许在paste事件发生时读取剪贴板数据，而IE没有这个限制。
+- Firefox、Safari和Chrome只允许在发生剪贴板事件时访问与剪贴板相关的信息，而IE允许在任何时候访问相关信息。
+
+选择框也是经常要通过JavaScript来控制的一个表单字段。
+
+富文本编辑功能是通过一个包含空HTML文档的iframe 元素来实现的。通过将空文档的designMode属性设置为"on"，就可以将该页面转换为可编辑状态，此时其表现如同字处理软件。另外，也可以将某个元素设置为contenteditable。JavaScript通过使用execCommand()方法也可以实现相同的一些功能。另外，使用queryCommandEnabled()、queryCommandState()和queryCommandValue()方法则可以取得有关文本选区的信息。由于以这种方式构建的富文本编辑器并不是一个表单字段，因此在将其内容提交给服务器之前，必须将iframe或contenteditable元素中的HTML复制到一个表单字段中。
+
+
+
 # 第15章 使用 Canvas 绘图
 
 ## 15.1 基本用法
 
-- 要使用<canvas>元素，必须先设置其width和height属性，指定可以绘图的区域大小。出现在开始和结束标签中的内容是后备信息，如果浏览器不支持<canvas>元素，就会显示这些信息。
+- 要使用`<canvas>`元素，必须先设置其width和height属性，指定可以绘图的区域大小。出现在开始和结束标签中的内容是后备信息，如果浏览器不支持`<canvas>`元素，就会显示这些信息。
 
-- 在使用<canvas>元素之前，首先要检测getContext()方法是否存在，这一步非常重要。有些浏览器会为HTML规范之外的元素创建默认的HTML元素对象。在这种情况下，即使变量中保存着一个有效的元素引用，也检测不到getContext()方法。
+- 在使用`<canvas>`元素之前，首先要检测getContext()方法是否存在，这一步非常重要。有些浏览器会为HTML规范之外的元素创建默认的HTML元素对象。在这种情况下，即使变量中保存着一个有效的元素引用，也检测不到getContext()方法。
 
-- 使用toDataURL()方法，可以导出在<canvas>元素上绘制的图像。这个方法接受一个参数，即图像的MIME类型格式，而且适合用于创建图像的任何上下文。
+- 使用toDataURL()方法，可以导出在`<canvas>`元素上绘制的图像。这个方法接受一个参数，即图像的MIME类型格式，而且适合用于创建图像的任何上下文。
 
-  > 默认情况下，浏览器会将图像编码为PNG格式（除非另行指定）。Firefox和Opera也支持基于"image/jpeg"参数的JPEG编码格式。由于这个方法是后来才追加的，所以支持<canvas>的浏览器也是在较新的版本中才加入了对它的支持，比如IE9、Firefox 3.5和Opera 10。
+  > 默认情况下，浏览器会将图像编码为PNG格式（除非另行指定）。Firefox和Opera也支持基于"image/jpeg"参数的JPEG编码格式。由于这个方法是后来才追加的，所以支持`<canvas>`的浏览器也是在较新的版本中才加入了对它的支持，比如IE9、Firefox 3.5和Opera 10。
 
   > 如果绘制到画布上的图像源自不同的域，toDataURL()方法会抛出错误。
 
