@@ -412,7 +412,7 @@ PS：
 - 这4个操作符对任何值都适用，遵循下列规则
   -  在应用于一个包含有效数字字符的字符串时，先将其转换为数字值，再执行加减1的操作。字符串变量变成数值变量。
   -  在应用于一个不包含有效数字字符的字符串时，将变量的值设置为NaN
-                      字符串变量变成数值变量。
+                       字符串变量变成数值变量。
   -  在应用于布尔值false时，先将其转换为0再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于布尔值true时，先将其转换为1再执行加减1的操作。布尔值变量变成数值变量。
   -  在应用于浮点数值时，执行加减1的操作。
@@ -8158,3 +8158,268 @@ Web Workers规范还在继续制定和改进之中。本节所讨论的Worker目
 
 
 
+
+# 附录A ECMAScript Harmony
+
+虽然到2011年的时候，Harmony，也就是未来的ECMAScript 6，还没有全部制定完成，但其中的几个部分已经尘埃落定。本附录所要介绍的就是那些将来肯定能进入最终规范的部分。在将来的实现中，这些内容的细节有可能与你在这里看到的不一样。
+
+> 该内容暂不关注，直接看已出的ES6
+
+
+
+# 附录B 严格模式
+
+支持严格模式的浏览器包括IE10+、Firefox 4+、Safari 5.1+和Chrome。
+
+## B.1 选择使用
+
+要选择进入严格模式，可以使用严格模式的编译指示（pragma），实际上就是一个不会赋给任何变量的字符串：
+"use strict"; 
+
+
+
+```
+"use strict"; 
+```
+
+这种语法（从ECMAScript 3开始支持）可以向后兼容那些不支持严格模式的JavaScript引擎。
+
+这种语法（从ECMAScript 3开始支持）可以向后兼容那些不支持严格模式的JavaScript引擎。
+
+如果是在全局作用域中（函数外部）给出这个编译指示，则整个脚本都将使用严格模式。
+
+可以只在函数中打开严格模式
+
+## B.2 变量
+
+首先，不允许意外创建全局变量。在严格模式下，如果给一个没有声明的变量赋值，那代码在执行时就会抛出ReferenceError。
+
+其次，不能对变量调用delete操作符。非严格模式允许这样操作，但会静默失败（返回false）。而在严格模式下，删除变量也会导致错误。
+
+严格模式下对变量名也有限制。特别地，不能使用implements、interface、let、package、private、protected、public、static和yield作为变量名。这些都是保留字。在严格模式下，用以上标识符作为变量名会导致语法错误。
+
+## B.3 对象
+
+在下列情形下操作对象的属性会导致错误：
+
+- 为只读属性赋值会抛出TypeError；
+- 对不可配置的（nonconfigurable）的属性使用delete操作符会抛出TypeError；
+- 为不可扩展的（nonextensible）的对象添加属性会抛出TypeError。
+
+使用对象的另一个限制与通过对象字面量声明对象有关。在使用对象字面量时，属性名必须唯一。
+
+## B.4 函数
+
+首先，严格模式要求命名函数的参数必须唯一。
+
+```javascript
+function sum (num, num){ 
+	//do something 
+} 	
+```
+
+在非严格模式下，这个函数声明不会抛出错误。通过参数名只能访问第二个参数，要访问第一个参
+数必须通过arguments对象。
+
+在严格模式下，arguments对象的行为也有所不同。在非严格模式下，修改命名参数的值也会反映到arguments对象中，而严格模式下这两个值是完全独立的。
+
+```javascript
+//修改命名参数的值
+//非严格模式：修改会反映到arguments中
+//严格模式：修改不会反映到arguments中
+
+function showValue(value){ 
+    value = "Foo"; 
+    alert(value); //"Foo" 
+    alert(arguments[0]); //非严格模式："Foo" 
+    //严格模式："Hi" 
+} 
+
+showValue("Hi");
+```
+
+另一个变化是淘汰了arguments.callee和arguments.caller。在非严格模式下，这两个属性一个引用函数本身，一个引用调用函数。而在严格模式下，访问哪个属性都会抛出TypeError。
+
+与变量类似，严格模式对函数名也做出了限制，不允许用implements、interface、let、package、
+private、protected、public、static和yield作为函数名。
+
+对函数的最后一点限制，就是只能在脚本的顶级和在函数内部声明函数。也就是说，在if语句中声明函数会导致语法错
+
+## B.5 eval()
+
+eval()函数在严格模式下也得到了提升。最大的变化就是它在包含上下文中不再创建变量或函数。
+
+可以在eval()中声明变量和函数，但这些变量或函数只能在被求值的特殊作用域中有效，随后就将被销毁。
+
+## B.6 eval与arguments
+
+严格模式已经明确禁止使用eval和arguments作为标识符，也不允许读写它们的值。
+
+在非严格模式下，可以重写eval，也可以给arguments赋值。但在严格模式下，这样做会导致语法错误。不能将它们用作标识符，意味着以下几种使用方式都会抛出语法错误：
+
+- 使用var声明；
+- 赋予另一个值；
+- 尝试修改包含的值，如使用++；
+- 用作函数名；
+- 用作命名的函数参数；
+- 在try-catch语句中用作例外名。
+
+## B.7 抑制this
+
+JavaScript 中一个最大的安全问题，也是最容易让人迷茫的地方，就是在某些情况下如何抑制this
+的值。在非严格模式下使用函数的apply()或call()方法时，null或undefined值会被转换为全局对象。而在严格模式下，函数的this值始终是指定的值，无论指定的是什么值。
+
+## B.8 其他变化
+
+首先是抛弃了with语句。非严格模式下的with语句能够改变解析标识符的路径，但在严格模式下，with被简化掉了。因此，在严格模式下使用with会导致语法错误。
+
+严格模式也去掉了JavaScript中的八进制字面量。以0开头的八进制字面量过去经常会导致很多错误。在严格模式下，八进制字面量已经成为无效的语法了。ECMAScript 5也修改了严格模式下parseInt()的行为。如今，八进制字面量在严格模式下会被当作以0开头的十进制字面量。
+
+
+
+# 附录C JavaScript库
+
+## C.1 通用库
+
+### C.1.1 YUI 
+
+开源JavaScript与CSS库，以一种组件方式设计的。这个库不只有一个文件；它包含了很多文件，提供各种不同的配置，让你可以按需载入。涵盖了JavaScript的所有方面，从基本的工具及帮助函数到完善的浏览器部件。
+
+### C.1.2 Prototype
+
+Prototype是类驱动的，旨在为JavaScript提供类定义和继承。
+
+### C.1.3 Dojo Toolkit
+
+Dojo Toolkit开源库基于一种包系统建模，一组功能组成一个包，可以按需载入。Dojo提供了范围广泛的选项和配置，几乎涵盖了你要用JavaScript做的任何事情。
+
+### C.1.4 MooTools 
+
+MooTools是一个为了精简和优化而设计的开源库，它为内置JavaScript对象添加了各种方法，以通过接近的接口提供新功能，或者直接提供新的对象。
+
+### C.1.5 jQuery
+
+jQuery是一个给JavaScript提供了函数式编程接口的开源库。其核心是构建于CSS选择器上的，用来操作DOM元素。通过链式调用，jQuery代码看上去更像是对于应该发生什么的描述而不是JavaScript代码。这种代码风格在设计师和原型制作人中非常流行。
+
+### C.1.6 MochiKit 
+
+MochKit是一个由一些小工具组成的开源库，它以完善的文档和完整的测试见长，拥有大量API及相关范例文档以及数百个测试来确保质量。
+
+### C.1.7 Underscore.js 
+
+Underscore.js并不是一个通用的库，其文档称Underscore.js是对jQuery的补充，提供了操作对象、数组、函数和其他JavaScript数据类型的更多的低级功能。
+
+## C.2 互联网应用
+
+互联网应用库是针对于简化完整的Web应用开发而设计的。它们并不提供应用问题的小块组件，
+而是提供了快速应用开发的整个概念框架。
+
+### C.2.1 Backbone.js
+
+Backbone.js是构建于Underscore.js基础之上的一个迷你MVC开源库，它针对单页应用进行优化，让你能够随着应用状态变化方便地更新页面的任意部分。
+
+### C.2.2 Rico
+
+Rico提供了Ajax、动画、样式以及部件的工具。
+
+### C.2.3 qooxdoo 
+
+旨在为整个互联网应用开发周期提供帮助的开源库。qooxdoo实现了它自己的类和接口，用于创建类似于传统面向对象语言的编程模型。这个库包含了一个完整的GUI工具包以及用于简化前端构建过程的编译器。
+
+## C.3 动画和特效
+
+### C.3.1 script.aculo.us
+
+script.aculo.us是Prototype的“同伴”，它提供了出色特效的简单使用方式，使用的东西不超过是CSS和DOM。Prototype必须在使用script.aculo.us之前载入。script.aculo.us是最流行的特效库之一
+
+### C.3.2 moo.fx
+
+moo.fx开源动画库是设计在Prototype或者MooTools之上运行的。它的目标是尽可能小（最新的版
+本是3KB)，并支持开发人员用尽可能少的代码创建动画。MooTools是默认包含moo.fx的，但也可以单独下载用于Prototype中。
+
+### C.3.3 Lightbox
+
+Lightbox是一个用于在任意页面上创建图像浮动层的JavaScript 库，依赖于Prototype和script.aculo.us 来实现它的视觉特效。基本的理念是让用户在一个浮动层中浏览一个或者一系列图像，而不必离开当前页面。Lightbox浮动层无论是外观还是过渡效果都可以自定义。
+
+## C.4 加密
+
+### C.4.1 JavaScript MD5
+
+该开源库实现了MD4、MD5以及SHA-1安全散列函数。
+
+### C.4.2 JavaScrypt
+
+该JavaScript库实现了MD5和AES（256位）加密算法。
+
+
+
+# 附录D  JavaScript工具
+
+## D.1校验器
+
+### D.1.1 JSLint 
+
+它通过跨浏览器问题的最小共同点检查，能够从核心层次上检查语法错误。（它遵循最严格的规则来确保代码到处都能运行。）你可以启用Crockford对于代码风格的警告，包括代码格式、未声明的全局变量的使用以及其他更多警告。尽管JSLint是用JavaScript写的，但是通过基于Java的Rhino解释器，它可以在命令行中运行，或者通过WScript或者其他JavaScript解释器。
+
+### D.1.2 JSHint 
+
+JSHint是JSLint的一个分支，为应用规则提供了更多的自定义功能。与JSLint类似，它首先检查语法错误，然后检查有问题的编码模式。JSLint的每一项检查JSHint都有，但开发人员可以更好地控制应用什么规则。与JSLint一样，JSHint也能使用Rhino在命令行中运行。
+
+### D.1.3 JavaScript Lint
+
+一个基于C的JavaScript校验器。它使用了SpiderMonkey（即Firefox所用的JavaScript解释器）来分析代码并查找语法错误。这个工具包含大量选项，可以启用额外关于编码风格的警告，以及未声明的变量和不可到达的代码警告。
+
+## D.2压缩器
+
+#### D.2.1 JSMin
+
+基于C的压缩器，进行最基本的JavaScript压缩。它主要是移除空白和注释，确保最终的代码依然可以被顺利执行。
+
+### D.2.2 Dojo ShrinkSafe
+
+它使用了Rhino JavaScript解释器首先将JavaScript代码解析为记号流，然后用它们来安全压缩代码。和JSMin一样，ShrinkSafe移除多余的空白符（不包括换行）和注释，但是还更进一步将局部变量替换为两个字符长的变量名。最后可以比JSMin产生更小输出，而没有引入语法错误的风险。
+
+### D.2.3 YUI Compressor
+
+YUI Compressor利用了Rhino解释器将JavaScript代码解析为记号流，并移除注释和空白字符并替换变量名。与ShrinkSafe不同，YUI Compressor还移除换行并进行一些细微的优化进一步节省字节数。一般来说，YUI Compressor处理过的文件要小于JSMin或者ShrinkSafe处理过的文件。
+
+## D.3 单元测试
+
+TDD（Test-driven development，测试驱动开发）是一种以单元测试为核心的软件开发过程。
+
+### D.3.1 JsUnit 
+
+最早的JavaScript单元测试框架，不绑定于任何特定的JavaScript库。JsUnit是Java知名的JUnit测试框架的移植。测试在页面中运行，并可以设置为自动测试并将结果提交到服务器。
+
+### D.3.2 YUI Test 
+
+YUI Test不仅可以用于测试使用YUI的代码，也可以测试网站或者应用中的任何代码。YUI Test包含了简单和复杂的断言，以及一种模拟简单的鼠标和键盘事件的方法。
+
+### D.3.3 DOH 
+
+DOH（Dojo Object Harness）在发布给大家使用之前，最初是作为Dojo内部的单元测试工具出现的。
+
+### D.3.4 qUnit
+
+qUnit是为测试jQuery而开发的一个单元测试框架。jQuery本身的确使用qUnit进行各项测试。除此之外，qUnit与jQuery并没有绑定关系，也可以用它来测试所有JavaScript代码。qUnit的特点是简单易用，一般开发人员很容易上手。
+
+## D.4 文档生成器
+
+### D.4.1 JsDoc Toolkit 
+
+它要求你在代码中输入类似Javadoc的注释，然后处理这些注释并输出为HTML文件。你可以自定义HTML的格式，这需使用预定义的JsDoc模板或者创建自己的模版。
+
+### D.4.2 YUI Doc
+
+YUI Doc是YUI的文档生成器。该生成器以Python书写，所以它要求安装有Python运行时环境。YUI Doc可以输出集成了属性和方法搜索（用YUI的自动完成挂件实现的）的HTML文件。和JsDoc
+一样，YUI Doc要求源代码中使用类似Javadoc的注释。默认的HTML可以通过修改默认的HTML模板文件和相关的样式表来更改。
+
+## D.5 安全执行环境
+
+### D.5.1 ADsafe
+
+ADsafe是JavaScript的子集，这个子集被认为可以被第三方脚本安全访问。对于用ADsafe运行的代码，页面必须包含ADsafe JavaScript库并标记为ADsafe挂件格式。因此，代码可以在任何页面上安全执行。
+
+### D.5.2 Caja 
+
+Caja用一种独特的方式来确保JavaScript的安全执行。类似于ADsafe，Caja定义了JavaScript的一个可以用安全方式使用的子集。Caja继而可以清理JavaScript代码并验证它只按照预期的方式运行。作为该项目的一部分，有一种叫做Cajita的语言，它是JavaScript功能的一种更小的子集。
